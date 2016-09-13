@@ -1,0 +1,6 @@
+﻿Version Date        Description
+0.0.1   2016.09.13  initial release
+
+N: ...  new feature
+C: ...  changes
+F: ...  bug fix
