@@ -54,7 +54,7 @@ if ($release[0] >= 9.3) $verify_hostname = "--no-verify-hostname";
 else $verify_hostname = "";
 
 // fetch release archive
-$return_val = mwexec("fetch {$verify_hostname} -vo {$install_dir}/master.zip 'https://github.com/crestAT/nas4free-{$config_name}/releases/download/{$version}/{$config_name}-{$version_striped}.zip'", true);
+$return_val = mwexec("fetch {$verify_hostname} -vo {$install_dir}/master.zip https://github.com/crestAT/nas4free-{$config_name}/releases/download/{$version}/{$config_name}-{$version_striped}.zip", true);
 if ($return_val == 0) {
     $return_val = mwexec("tar -xf {$install_dir}/master.zip -C {$install_dir}/ --exclude='.git*' --strip-components 2", true);
     if ($return_val == 0) {
@@ -77,7 +77,10 @@ else {
 }
 
 // install / update application on NAS4Free
-if (($configuration = load_config($config_file)) === false) $configuration = array();             // new installation
+if (($configuration = load_config($config_file)) === false) {
+    $configuration = array();             // new installation
+    $new_installation = true;    
+}
     $configuration['appname'] = $appname;
     $configuration['version'] = exec("cat {$install_dir}/version.txt");
     $configuration['rootfolder'] = $install_dir;
@@ -97,5 +100,6 @@ if (($configuration = load_config($config_file)) === false) $configuration = arr
     save_config($config_file, $configuration);
     write_config();
     require_once("{$install_dir}/{$config_name}-start.php");
-    $savemsg = gettext("Installation completed, use WebGUI | Extensions | ".$appname." to configure the application!");
+    if ($new_installation) echo "\nInstallation completed, use WebGUI | Extensions | ".$appname." to configure the application!\n";
+
 ?>
