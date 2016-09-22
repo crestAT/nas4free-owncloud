@@ -31,7 +31,7 @@
  */
 require("auth.inc");
 require("guiconfig.inc");
-require("ext/owncloud/json.inc");
+require_once("ext/owncloud/json.inc");
 
 bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
@@ -43,7 +43,7 @@ $pgtitle = array(gettext("Extensions"), gettext("OwnCloud")." ".$configuration['
 
 if (is_file("{$configuration['rootfolder']}/oneload")) { require_once("{$configuration['rootfolder']}/oneload"); }
 
-$return_val = mwexec("fetch -o {$configuration['rootfolder']}/version_server.txt https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/version.txt", true);
+$return_val = mwexec("fetch -o {$configuration['rootfolder']}/version_server.txt https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/version.txt", false);
 if ($return_val == 0) { 
     $server_version = exec("cat {$configuration['rootfolder']}/version_server.txt"); 
     if ($server_version != $configuration['version']) { $savemsg .= sprintf(gettext("New extension version %s available, push '%s' button to install the new version!"), $server_version, gettext("Update Extension")); }

@@ -1,5 +1,5 @@
 ﻿Version Date        Description
-0.0.1   2016.09.13  initial release
+0.1     2016.09.22  initial release
 
 N: ...  new feature
 C: ...  changes

@@ -31,7 +31,7 @@
  */
 require("auth.inc");
 require("guiconfig.inc");
-require("ext/owncloud/json.inc");
+require_once("ext/owncloud/json.inc");
 
 // Dummy standard message gettext calls for xgettext retrieval!!!
 $dummy = gettext("The changes have been applied successfully.");
@@ -41,8 +41,36 @@ $dummy = gettext("The following input errors were detected");
 bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
 if (($configuration = load_config($config_file)) === false) $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
+$owncloud_source = "https://download.owncloud.org/community/owncloud-9.1.1.zip";
 
 $pgtitle = array(gettext("Extensions"), gettext("OwnCloud")." ".$configuration['version'], gettext("Configuration"));
+
+/* Get webserver status and IP@ */
+function get_process_info() {
+    global $config;
+    global $configuration;
+
+    // Get webserver status
+    $enable_webserver = isset($config['websrv']['enable']) ? true : false;
+    $status_webserver = rc_is_service_running('websrv');
+    if ($enable_webserver) $enable_webserver_msg = '<a style=" background-color: #00ff00; ">&nbsp;&nbsp;<b>'.gettext("enabled").'</b>&nbsp;&nbsp;</a>';
+    else $enable_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("disabled").'</b>&nbsp;&nbsp;</a>';
+    if (0 === $status_webserver) $status_webserver_msg = '<a style=" background-color: #00ff00; ">&nbsp;&nbsp;<b>'.gettext("running").'</b>&nbsp;&nbsp;</a>';
+    else $status_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("stopped").'</b>&nbsp;&nbsp;</a>';
+    
+    // Retrieve IP@ only if webserver is enabled & running
+    if ((0 === $status_webserver) && $enable_webserver) {
+        $ipaddr = get_ipaddr($config['interfaces']['lan']['if']);
+        $owncloud_document_root = str_replace($config['websrv']['documentroot'], "", $configuration['storage_path']);
+        $url = htmlspecialchars("{$config['websrv']['protocol']}://{$ipaddr}:{$config['websrv']['port']}/{$owncloud_document_root}");
+        $ipurl = "<a href='{$url}' target='_blank'>{$url}</a>";
+    }
+    else $ipurl = "";
+    
+    $state['webserver'] = $enable_webserver_msg."&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".$status_webserver_msg;
+    $state['url'] = $ipurl;
+	return ($state);
+}
 
 /* Check if the directory exists, the mountpoint has at least o=rx permissions and
  * set the permission to 775 for the last directory in the path
@@ -68,7 +96,6 @@ function change_perms($dir) {
                 $path_elements = $path_elements - 1;
                 $directory = $directory."/$path_check[$path_elements]"; // add last level
                 exec("chmod 775 {$directory}");                         // set permissions to 775
-                exec("chown {$_POST['who']} {$directory}*");
             }
             else $input_errors[] = sprintf(gettext("%s needs at least read & execute permissions at the mount point for directory %s! Set the Read and Execute bits for Others (Access Restrictions | Mode) for the mount point %s (in <a href='disks_mount.php'>Disks | Mount Point | Management</a> or <a href='disks_zfs_dataset.php'>Disks | ZFS | Datasets</a>) and hit Save in order to take them effect."), 
                 gettext("OwnCloud"), $path, "/{$path_check[1]}/{$path_check[2]}");
@@ -93,22 +120,27 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                     $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("data folder"), "<b>'/mnt/'</b>");
                 }
                 else {
-                    if (!is_dir($configuration['storage_path'])) mkdir($configuration['storage_path'], 0775, true);
-                    change_perms($_POST['storage_path']);
-                    if (!is_dir($configuration['download_path'])) mkdir($configuration['download_path'], 0775, true);
-                    change_perms($_POST['download_path']);
                     // get the user for chown => <runasuser>server.username = "www"</runasuser>
                     $user = explode(" ", $config['websrv']['runasuser']);
-                    chown($configuration['download_path'], str_replace('"', '', $user[2]));
+                    $user = str_replace('"', '', $user[2]);
+
+                    if (!is_dir($configuration['storage_path'])) mkdir($configuration['storage_path'], 0775, true);
+                    change_perms($configuration['storage_path']);
+                    chown($configuration['storage_path'], $user);
+                    if (!is_dir($configuration['download_path'])) mkdir($configuration['download_path'], 0775, true);
+                    change_perms($configuration['download_path']);
+                    chown($configuration['download_path'], $user);
                     $savemsg .= get_std_save_message(save_config($config_file, $configuration))." ";
+
                     require_once("{$configuration['rootfolder']}/owncloud-start.php");
                     if (isset($_POST['install']) && $_POST['install']) {
                         // download installer & install
-                        $return_val = mwexec("fetch -vo {$configuration['storage_path']}/master.zip 'https://download.owncloud.org/community/owncloud-9.1.0.zip'", true);
+                        $return_val = mwexec("fetch -vo {$configuration['storage_path']}/master.zip {$owncloud_source}", true);
                         if ($return_val == 0) {
                             $return_val = mwexec("tar -xf {$configuration['storage_path']}/master.zip -C {$configuration['storage_path']}/  --strip-components 1", true);
                             if ($return_val == 0) { 
                                 exec("rm {$configuration['storage_path']}/master.zip");
+                                copy("{$configuration['rootfolder']}/.user.ini", "{$configuration['storage_path']}/.user.ini");
                                 $savemsg .= "<br />".gettext("OwnCloud")." ".gettext("successfully installed."); 
                             }
                             else {
@@ -116,7 +148,7 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                                 return;
                             }
                         }
-                        else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), "https://download.owncloud.org/community/owncloud-9.1.0.zip"); }
+                        else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), $owncloud_source); }
                     }
                 }
             }
@@ -128,31 +160,30 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 $configuration['storage_path'] = !empty($configuration['storage_path']) ? $configuration['storage_path'] : str_replace("//", "/", $config['websrv']['documentroot']."/owncloud");
 $configuration['download_path'] = !empty($configuration['download_path']) ? $configuration['download_path'] : $g['media_path'];
 
-// Get webserver status
-$status_webserver = rc_is_service_running('websrv');
-if (0 === $status_webserver) $status_webserver_msg = '<a href="services_websrv.php" title="'.gettext("running").'"><img src="images/status_enabled.png" border="0" alt="" /></a>';
-else $status_webserver_msg = '<a href="services_websrv.php" title="'.gettext("stopped").'"><img src="images/status_disabled.png" border="0" alt="" /></a>';
-
-// Retrieve IP@ only when webserver is running
-if (0 === $status_webserver) {
-    $ipaddr = get_ipaddr($config['interfaces']['lan']['if']);
-    $owncloud_document_root = str_replace($config['websrv']['documentroot'], "", $configuration['storage_path']);
-    $url = htmlspecialchars("http://{$ipaddr}:{$config['websrv']['port']}/{$owncloud_document_root}");
-    $ipurl = "<a href='{$url}' target='_blank'>{$url}</a>";
-}
-else $ipurl = "";
-
- /* 
-$return_val = mwexec("fetch -o {$configuration['rootfolder']}//server-version.txt https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/version.txt", false);
+$return_val = mwexec("fetch -o {$configuration['rootfolder']}/version_server.txt https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/version.txt", false);
 if ($return_val == 0) {
-    $server_version = exec("cat {$configuration['rootfolder']}/log/version.txt");
+    $server_version = exec("cat {$configuration['rootfolder']}/version_server.txt");
     if ($server_version != $configuration['version']) { $savemsg .= sprintf(gettext("New extension version %s available, push '%s' button to install the new version!"), $server_version, gettext("Maintenance")); }
 }   //EOversion-check
- */
+
+if (is_ajax()) {
+    $getinfo = get_process_info();
+	render_ajax($getinfo);
+}
 
 bindtextdomain("nas4free", "/usr/local/share/locale");                  // to get the right main menu language
 include("fbegin.inc");
 bindtextdomain("nas4free", "/usr/local/share/locale-owncloud"); ?>
+<script type="text/javascript">//<![CDATA[
+$(document).ready(function(){
+	var gui = new GUI;
+	gui.recall(0, 10000, 'owncloud-config.php', null, function(data) {
+        $('#getinfo_webserver').html(data.webserver);
+        $('#getinfo_url').html(data.url);
+	});
+});
+//]]>
+</script>
 <!-- The Spinner Elements -->
 <?php include("ext/owncloud/spinner.inc");?>
 <script src="ext/owncloud/spin.min.js"></script>
@@ -184,12 +215,18 @@ function enable_change(enable_change) {
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
             <?php html_titleline_checkbox("enable", gettext("OwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
-            <?php html_text("status_webserver", gettext("Status")." ".gettext("Webserver"), $status_webserver_msg);?>
+            <tr>
+                <td class="vncell"><?=gettext("Status")." ".gettext("Webserver");?></td>
+                <td class="vtable"><span name="getinfo_webserver" id="getinfo_webserver"><?=get_process_info()['webserver'];?></span></td>
+            </tr>
 			<?php html_filechooser("storage_path", gettext("OwnCloud")." ".gettext("document root"), $configuration['storage_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("document root"), "<b>'{$config['websrv']['documentroot']}'</b>"), true, 60);?>
 			<?php html_filechooser("download_path", gettext("OwnCloud")." ".gettext("data folder"), $configuration['download_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("data folder"), "<b>'/mnt/'</b>").
             " ".gettext("Use this folder at the first login screen.").
             "<br /><b><font color='red'>".sprintf(gettext("For security reasons this folder should NOT be set to a directory below %s!"), $config['websrv']['documentroot'])."</font></b>", true, 60);?>
-            <?php html_text("url", gettext("OwnCloud")." ".gettext("URL"), $ipurl);?>
+            <tr>
+                <td class="vncell"><?=gettext("OwnCloud")." ".gettext("URL");?></td>
+                <td class="vtable"><span name="getinfo_url" id="getinfo_url"><?=get_process_info()['url'];?></span></td>
+            </tr>
         </table>
         <div id="submit">
 			<input id="save" name="save" type="submit" class="formbtn" value="<?=gettext("Save");?>"/>
