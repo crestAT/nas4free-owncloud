@@ -59,7 +59,7 @@ function get_process_info() {
     else $status_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("stopped").'</b>&nbsp;&nbsp;</a>';
     
     // Retrieve IP@ only if webserver is enabled & running
-    if ((0 === $status_webserver) && $enable_webserver) {
+    if ((0 === $status_webserver) && $enable_webserver && ($configuration['enable'] === true)) {
         $ipaddr = get_ipaddr($config['interfaces']['lan']['if']);
         $owncloud_document_root = str_replace($config['websrv']['documentroot'], "", $configuration['storage_path']);
         $url = htmlspecialchars("{$config['websrv']['protocol']}://{$ipaddr}:{$config['websrv']['port']}/{$owncloud_document_root}");
@@ -120,9 +120,12 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                     $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("data folder"), "<b>'/mnt/'</b>");
                 }
                 else {
-                    // get the user for chown => <runasuser>server.username = "www"</runasuser>
-                    $user = explode(" ", $config['websrv']['runasuser']);
-                    $user = str_replace('"', '', $user[2]);
+                    // get the user for chown => <runasuser>server.username = "www"</runasuser> or if not set use "root"
+                    if (isset($config['websrv']['runasuser']) && !empty($config['websrv']['runasuser'])) {
+                        $user = explode(" ", $config['websrv']['runasuser']);
+                        $user = str_replace('"', '', $user[2]);
+                    }
+                    else $user = "root";                    
 
                     if (!is_dir($configuration['storage_path'])) mkdir($configuration['storage_path'], 0775, true);
                     change_perms($configuration['storage_path']);
@@ -141,7 +144,7 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                             if ($return_val == 0) { 
                                 exec("rm {$configuration['storage_path']}/master.zip");
                                 copy("{$configuration['rootfolder']}/.user.ini", "{$configuration['storage_path']}/.user.ini");
-                                $savemsg .= "<br />".gettext("OwnCloud")." ".gettext("successfully installed."); 
+                                $savemsg .= "<br />".gettext("OwnCloud")." ".gettext("has been successfully installed."); 
                             }
                             else {
                                 $input_errors[] = sprintf(gettext("Archive file %s not found, installation aborted!"), "master.zip corrupt /");
