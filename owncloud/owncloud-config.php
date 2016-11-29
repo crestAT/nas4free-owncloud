@@ -2,7 +2,7 @@
 /* 
     owncloud-config.php
 
-    Copyright (c) 2015 - 2016 Andreas Schmidhuber
+    Copyright (c) 2013 - 2017 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,8 @@ $dummy = gettext("The following input errors were detected");
 bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
 if (($configuration = load_config($config_file)) === false) $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
-$owncloud_source = "https://download.owncloud.org/community/owncloud-9.1.1.zip";
+// https://download.owncloud.org/community/owncloud-9.1.1.zip
+$owncloud_source = "https://download.owncloud.org/community/owncloud-9.1.2.zip";
 
 $pgtitle = array(gettext("Extensions"), gettext("OwnCloud")." ".$configuration['version'], gettext("Configuration"));
 
@@ -163,11 +164,14 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 $configuration['storage_path'] = !empty($configuration['storage_path']) ? $configuration['storage_path'] : str_replace("//", "/", $config['websrv']['documentroot']."/owncloud");
 $configuration['download_path'] = !empty($configuration['download_path']) ? $configuration['download_path'] : $g['media_path'];
 
-$return_val = mwexec("fetch -o {$configuration['rootfolder']}/version_server.txt https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/version.txt", false);
-if ($return_val == 0) {
-    $server_version = exec("cat {$configuration['rootfolder']}/version_server.txt");
-    if ($server_version != $configuration['version']) { $savemsg .= sprintf(gettext("New extension version %s available, push '%s' button to install the new version!"), $server_version, gettext("Maintenance")); }
-}   //EOversion-check
+$test_filename = "{$configuration['rootfolder']}/version_server.txt";
+if (!is_file($test_filename) || filemtime($test_filename) < time() - 86400) {	// test if file exists or is older than 24 hours
+	$return_val = mwexec("fetch -o {$test_filename} https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/version.txt", false);
+	if ($return_val == 0) {
+	    $server_version = exec("cat {$test_filename}");
+	    if ($server_version != $configuration['version']) { $savemsg .= sprintf(gettext("New extension version %s available, push '%s' button to install the new version!"), $server_version, gettext("Maintenance")); }
+	}
+}	//EOversion-check
 
 if (is_ajax()) {
     $getinfo = get_process_info();

@@ -2,7 +2,7 @@
 /*
     owncloud-update_extension.php
     
-    Copyright (c) 2015 - 2016 Andreas Schmidhuber
+    Copyright (c) 2013 - 2017 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -52,12 +52,21 @@ if ($return_val == 0) {
 else { $server_version = gettext("Unable to retrieve version from server!"); }
 
 if (isset($_POST['ext_remove']) && $_POST['ext_remove']) {
-// remove start command
-    if (is_array($config['rc']['postinit'] ) && is_array($config['rc']['postinit']['cmd'])) {
-		for ($i = 0; $i < count($config['rc']['postinit']['cmd']); $i++) {
-    		if (preg_match('/owncloud/', $config['rc']['postinit']['cmd'][$i])) unset($config['rc']['postinit']['cmd'][$i]);
-		}
+// remove start/stop commands
+// remove existing old rc format entries
+if (is_array($config['rc']) && is_array($config['rc']['postinit']) && is_array( $config['rc']['postinit']['cmd'])) {
+    $rc_param_count = count($config['rc']['postinit']['cmd']);
+    for ($i = 0; $i < $rc_param_count; $i++) {
+        if (preg_match("/owncloud/", $config['rc']['postinit']['cmd'][$i])) unset($config['rc']['postinit']['cmd'][$i]);
+    }
+}
+// remove existing entries for new rc format
+if (is_array($config['rc']) && is_array($config['rc']['param'])) {
+	$rc_param_count = count($config['rc']['param']);
+    for ($i = 0; $i < $rc_param_count; $i++) {
+        if (preg_match("/owncloud/", $config['rc']['param'][$i]['value'])) unset($config['rc']['param'][$i]);
 	}
+}
 // remove links
     if (is_link("/usr/local/share/locale-owncloud")) unlink("/usr/local/share/locale-owncloud");
     if (is_link("/usr/local/www/owncloud-config.php")) unlink("/usr/local/www/owncloud-config.php");
@@ -74,7 +83,7 @@ if (isset($_POST['ext_update']) && $_POST['ext_update']) {
     if ($return_val == 0) {
         require_once("{$configuration['rootfolder']}/owncloud-install.php"); 
         $version = exec("cat {$configuration['rootfolder']}/version.txt");
-        $savemsg = sprintf(gettext("Update to version %s completed!"), $version);
+        $savemsg .= sprintf(gettext("Update to version %s completed!"), $version);
         header("Refresh:8");;
     }
     else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), "owncloud-install.php"); }
