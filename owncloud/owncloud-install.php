@@ -2,7 +2,7 @@
 /* 
     owncloud-install.php
     
-    Copyright (c) 2015 - 2016 Andreas Schmidhuber
+    Copyright (c) 2013 - 2017 Andreas Schmidhuber
     All rights reserved.
     
     Redistribution and use in source and binary forms, with or without
@@ -29,8 +29,8 @@
     of the authors and should not be interpreted as representing official policies,
     either expressed or implied, of the FreeBSD Project.
 */
-$version = "v0.1";      // extension version
-$appname = "OwnCloud";    // extension name
+$version = "v0.1.1";		// extension version
+$appname = "OwnCloud";		// extension name
 
 require_once("config.inc");
 
@@ -64,7 +64,6 @@ if ($return_val == 0) {
         $config_file = "{$install_dir}/{$config_name}/{$config_name}.conf";
         if (is_file("{$install_dir}/version.txt")) { $file_version = exec("cat {$install_dir}/version.txt"); }
         else { $file_version = "n/a"; }
-//        $savemsg = sprintf(gettext("Update to version %s completed!"), $file_version);
     }
     else { 
         $input_errors[] = sprintf(gettext("Archive file %s not found, installation aborted!"), "master.zip corrupt /"); 
@@ -81,25 +80,44 @@ if (($configuration = load_config($config_file)) === false) {
     $configuration = array();             // new installation
     $new_installation = true;    
 }
-    $configuration['appname'] = $appname;
-    $configuration['version'] = exec("cat {$install_dir}/version.txt");
-    $configuration['rootfolder'] = $install_dir;
-    $configuration['postinit'] = "/usr/local/bin/php-cgi -f {$install_dir}/{$config_name}-start.php";
+$configuration['appname'] = $appname;
+$configuration['version'] = exec("cat {$install_dir}/version.txt");
+$configuration['rootfolder'] = $install_dir;
+$configuration['postinit'] = "/usr/local/bin/php-cgi -f {$install_dir}/{$config_name}-start.php";
 
-    if ( is_array($config['rc']['postinit'] ) && is_array( $config['rc']['postinit']['cmd'] ) ) {
-        for ($i; $i < count($config['rc']['postinit']['cmd']);) {
-            if (preg_match('/extended-gui/', $config['rc']['postinit']['cmd'][$i])) break; ++$i; }
+// remove start/stop commands
+// remove existing old rc format entries
+if (is_array($config['rc']) && is_array($config['rc']['postinit']) && is_array( $config['rc']['postinit']['cmd'])) {
+    $rc_param_count = count($config['rc']['postinit']['cmd']);
+    for ($i = 0; $i < $rc_param_count; $i++) {
+        if (preg_match("/{$config_name}/", $config['rc']['postinit']['cmd'][$i])) unset($config['rc']['postinit']['cmd'][$i]);
     }
-    $config['rc']['postinit']['cmd'][$i] = $config['extended-gui']['rootfolder']."extended-gui_start.php";
+}
+// remove existing entries for new rc format
+if (is_array($config['rc']) && is_array($config['rc']['param'])) {
+	$rc_param_count = count($config['rc']['param']);
+    for ($i = 0; $i < $rc_param_count; $i++) {
+        if (preg_match("/{$config_name}/", $config['rc']['param'][$i]['value'])) unset($config['rc']['param'][$i]);
+	}
+}
 
-    if (is_array($config['rc']['postinit'] ) && is_array($config['rc']['postinit']['cmd'] ) ) {
-        for ($i = 0; $i < count($config['rc']['postinit']['cmd']); $i++) {
-            if (preg_match("/{$config_name}/", $config['rc']['postinit']['cmd'][$i])) break; }
-    }
-    $config['rc']['postinit']['cmd'][$i] = $configuration['postinit']; 
-    save_config($config_file, $configuration);
-    write_config();
-    require_once("{$install_dir}/{$config_name}-start.php");
-    if ($new_installation) echo "\nInstallation completed, use WebGUI | Extensions | ".$appname." to configure the application!\n";
-
+if ($release[0] >= 11.0) {	// new rc format
+	// postinit command
+	$rc_param = [];
+	$rc_param['uuid'] = uuid();
+	$rc_param['name'] = "{$appname} Extension";
+	$rc_param['value'] = $configuration['postinit'];
+	$rc_param['comment'] = "Start {$appname} Extension";
+	$rc_param['typeid'] = '2';
+	$rc_param['enable'] = true;
+	$config['rc']['param'][] = $rc_param;
+	$configuration['rc_uuid_start'] = $rc_param['uuid'];
+}
+else {
+    $config['rc']['postinit']['cmd'][$i] = $configuration['postinit'];
+}
+save_config($config_file, $configuration);
+write_config();
+require_once("{$install_dir}/{$config_name}-start.php");
+if ($new_installation) echo "\nInstallation completed, use WebGUI | Extensions | ".$appname." to configure the application!\n";
 ?>
