@@ -1,1 +1,1 @@
-<a href="owncloud-config.php">OwnCloud</a>
+<a href="owncloud-config.php">NextOwnCloud</a>

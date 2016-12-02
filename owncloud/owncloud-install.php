@@ -29,13 +29,13 @@
     of the authors and should not be interpreted as representing official policies,
     either expressed or implied, of the FreeBSD Project.
 */
-$version = "v0.1.1";		// extension version
-$appname = "OwnCloud";		// extension name
+$version = "v0.2";		// extension version
+$appname = "NextOwnCloud";		// extension name
 
 require_once("config.inc");
 
 $install_dir = dirname(__FILE__);                           // get directory where the installer script resides
-$config_name = strtolower($appname);
+$config_name = "owncloud";
 $version_striped = str_replace(".", "", $version);
 
 $arch = $g['arch'];
@@ -84,6 +84,8 @@ $configuration['appname'] = $appname;
 $configuration['version'] = exec("cat {$install_dir}/version.txt");
 $configuration['rootfolder'] = $install_dir;
 $configuration['postinit'] = "/usr/local/bin/php-cgi -f {$install_dir}/{$config_name}-start.php";
+$configuration['OwnCloud']['source'] = "https://download.owncloud.org/community/owncloud-9.1.2.zip";
+$configuration['NextCloud']['source'] = "https://download.nextcloud.com/server/releases/nextcloud-10.0.1.zip";
 
 // remove start/stop commands
 // remove existing old rc format entries
@@ -94,7 +96,7 @@ if (is_array($config['rc']) && is_array($config['rc']['postinit']) && is_array( 
     }
 }
 // remove existing entries for new rc format
-if (is_array($config['rc']) && is_array($config['rc']['param'])) {
+if (is_array($config['rc']) && is_array($config['rc']['param']['0'])) {
 	$rc_param_count = count($config['rc']['param']);
     for ($i = 0; $i < $rc_param_count; $i++) {
         if (preg_match("/{$config_name}/", $config['rc']['param'][$i]['value'])) unset($config['rc']['param'][$i]);

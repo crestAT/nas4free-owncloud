@@ -41,10 +41,8 @@ $dummy = gettext("The following input errors were detected");
 bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
 if (($configuration = load_config($config_file)) === false) $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
-// https://download.owncloud.org/community/owncloud-9.1.1.zip
-$owncloud_source = "https://download.owncloud.org/community/owncloud-9.1.2.zip";
 
-$pgtitle = array(gettext("Extensions"), gettext("OwnCloud")." ".$configuration['version'], gettext("Configuration"));
+$pgtitle = array(gettext("Extensions"), $configuration['appname']." ".$configuration['version'], gettext("Configuration"));
 
 /* Get webserver status and IP@ */
 function get_process_info() {
@@ -58,18 +56,20 @@ function get_process_info() {
     else $enable_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("disabled").'</b>&nbsp;&nbsp;</a>';
     if (0 === $status_webserver) $status_webserver_msg = '<a style=" background-color: #00ff00; ">&nbsp;&nbsp;<b>'.gettext("running").'</b>&nbsp;&nbsp;</a>';
     else $status_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("stopped").'</b>&nbsp;&nbsp;</a>';
-    
+/* 
     // Retrieve IP@ only if webserver is enabled & running
-    if ((0 === $status_webserver) && $enable_webserver && ($configuration['enable'] === true)) {
-        $ipaddr = get_ipaddr($config['interfaces']['lan']['if']);
-        $owncloud_document_root = str_replace($config['websrv']['documentroot'], "", $configuration['storage_path']);
-        $url = htmlspecialchars("{$config['websrv']['protocol']}://{$ipaddr}:{$config['websrv']['port']}/{$owncloud_document_root}");
-        $ipurl = "<a href='{$url}' target='_blank'>{$url}</a>";
-    }
+    if ((0 === $status_webserver) && $enable_webserver && ($configuration['enable'] === true)) $ipurl = $configuration['url'];
     else $ipurl = "";
-    
-    $state['webserver'] = $enable_webserver_msg."&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".$status_webserver_msg;
-    $state['url'] = $ipurl;
+ */
+    // check for standard Webserver upload directory
+    if (($config['websrv']['uploaddir'] == "/var/tmp/ftmp") || ($config['websrv']['uploaddir'] == "")) {
+    	$alert_title = sprintf(gettext("Change the %s in %s | %s to another path which has more disk space!"), gettext("Upload directory"), gettext("Services"), gettext("Webserver"));
+		$status_webserver_uploaddir = '<a title="'.$alert_title.' "style=" background-color: orange; ">&nbsp;&nbsp;<b>'.gettext("Upload directory")." ".gettext("is on default location, this could lead to upload problems for big files!").'</b>&nbsp;&nbsp;</a>';
+	}
+	else $status_webserver_uploaddir = "";
+	
+    $state['webserver'] = $enable_webserver_msg."&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".$status_webserver_msg."&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".$status_webserver_uploaddir;
+//    $state['url'] = $ipurl;
 	return ($state);
 }
 
@@ -109,16 +109,17 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 	if (empty($input_errors)) {
         $configuration['enable'] = isset($_POST['enable']);
         if (isset($_POST['enable'])) {
+        	$configuration['application'] = $_POST['application']; 
             $configuration['storage_path'] = !empty($_POST['storage_path']) ? $_POST['storage_path'] : $config['websrv']['documentroot']."/owncloud";
             $configuration['storage_path'] = rtrim($configuration['storage_path'],'/');         // ensure to have NO trailing slash
             if (strpos($configuration['storage_path'], "{$config['websrv']['documentroot']}") === false) {
-                $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("document root"), "<b>'{$config['websrv']['documentroot']}'</b>");
+                $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("Document Root"), "<b>'{$config['websrv']['documentroot']}'</b>");
             }
             else {
                 $configuration['download_path'] = !empty($_POST['download_path']) ? $_POST['download_path'] : $g['media_path'];
                 $configuration['download_path'] = rtrim($configuration['download_path'],'/');         // ensure to have NO trailing slash
                 if (strpos($configuration['download_path'], "/mnt/") === false) {
-                    $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("data folder"), "<b>'/mnt/'</b>");
+                    $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("Data Folder"), "<b>'/mnt/'</b>");
                 }
                 else {
                     // get the user for chown => <runasuser>server.username = "www"</runasuser> or if not set use "root"
@@ -134,25 +135,35 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                     if (!is_dir($configuration['download_path'])) mkdir($configuration['download_path'], 0775, true);
                     change_perms($configuration['download_path']);
                     chown($configuration['download_path'], $user);
+
+			        $ipaddr = get_ipaddr($config['interfaces']['lan']['if']);
+			        $owncloud_document_root = str_replace($config['websrv']['documentroot'], "", $configuration['storage_path']);
+			        $url = htmlspecialchars("{$config['websrv']['protocol']}://{$ipaddr}:{$config['websrv']['port']}{$owncloud_document_root}");
+			        $configuration['url'] = "<a href='{$url}' target='_blank'>{$url}</a>";
+
+					$configuration[$configuration['application']]['storage_path'] = $configuration['storage_path'];
+					$configuration[$configuration['application']]['download_path'] = $configuration['download_path'];
+					$configuration[$configuration['application']]['url'] = $configuration['url'];
+
                     $savemsg .= get_std_save_message(save_config($config_file, $configuration))." ";
 
                     require_once("{$configuration['rootfolder']}/owncloud-start.php");
                     if (isset($_POST['install']) && $_POST['install']) {
                         // download installer & install
-                        $return_val = mwexec("fetch -vo {$configuration['storage_path']}/master.zip {$owncloud_source}", true);
+                        $return_val = mwexec("fetch -vo {$configuration['storage_path']}/master.zip {$configuration[$configuration['application']]['source']}", true);
                         if ($return_val == 0) {
                             $return_val = mwexec("tar -xf {$configuration['storage_path']}/master.zip -C {$configuration['storage_path']}/  --strip-components 1", true);
                             if ($return_val == 0) { 
                                 exec("rm {$configuration['storage_path']}/master.zip");
                                 copy("{$configuration['rootfolder']}/.user.ini", "{$configuration['storage_path']}/.user.ini");
-                                $savemsg .= "<br />".gettext("OwnCloud")." ".gettext("has been successfully installed."); 
+                                $savemsg .= "<br />".$configuration['application']." ".gettext("has been successfully installed."); 
                             }
                             else {
                                 $input_errors[] = sprintf(gettext("Archive file %s not found, installation aborted!"), "master.zip corrupt /");
                                 return;
                             }
                         }
-                        else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), $owncloud_source); }
+                        else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), $configuration[$configuration['application']]['source']); }
                     }
                 }
             }
@@ -161,8 +172,17 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
     }   // Eo-empty input_errors
 }   // Eo-save-install
 
-$configuration['storage_path'] = !empty($configuration['storage_path']) ? $configuration['storage_path'] : str_replace("//", "/", $config['websrv']['documentroot']."/owncloud");
-$configuration['download_path'] = !empty($configuration['download_path']) ? $configuration['download_path'] : $g['media_path'];
+if (isset($_POST['remove']) && $_POST['remove']) {
+	mwexec("rm -Rf {$configuration['storage_path']} {$configuration['download_path']}");
+}
+
+$configuration['application'] = !empty($configuration['application']) ? $configuration['application'] : "OwnCloud";
+if (!empty($configuration[$configuration['application']]['storage_path'])) $configuration['storage_path'] = $configuration[$configuration['application']]['storage_path'];
+else $configuration['storage_path'] = !empty($configuration['storage_path']) ? $configuration['storage_path'] : str_replace("//", "/", $config['websrv']['documentroot']."/owncloud");
+if (!empty($configuration[$configuration['application']]['download_path'])) $configuration['download_path'] = $configuration[$configuration['application']]['download_path'];
+else $configuration['download_path'] = !empty($configuration['download_path']) ? $configuration['download_path'] : str_replace("//", "/", $config['websrv']['documentroot']."/owncloud");
+if (!empty($configuration[$configuration['application']]['url'])) $configuration['url'] = $configuration[$configuration['application']]['url'];
+else $configuration['url'] = !empty($configuration['url']) ? $configuration['url'] : "";
 
 $test_filename = "{$configuration['rootfolder']}/version_server.txt";
 if (!is_file($test_filename) || filemtime($test_filename) < time() - 86400) {	// test if file exists or is older than 24 hours
@@ -186,7 +206,7 @@ $(document).ready(function(){
 	var gui = new GUI;
 	gui.recall(0, 10000, 'owncloud-config.php', null, function(data) {
         $('#getinfo_webserver').html(data.webserver);
-        $('#getinfo_url').html(data.url);
+//        $('#getinfo_url').html(data.url);
 	});
 });
 //]]>
@@ -200,11 +220,33 @@ $(document).ready(function(){
 <!--
 function enable_change(enable_change) {
     var endis = !(document.iform.enable.checked || enable_change);
+	document.iform.application.disabled = endis;
 	document.iform.storage_path.disabled = endis;
 	document.iform.storage_pathbrowsebtn.disabled = endis;
 	document.iform.download_path.disabled = endis;
 	document.iform.download_pathbrowsebtn.disabled = endis;
 	document.iform.install.disabled = endis;
+	document.iform.remove.disabled = endis;
+}
+
+function change_application() {
+	switch(document.iform.application.selectedIndex) {
+		case 0:
+			document.iform.install.disabled = true;
+			document.iform.remove.disabled = true;
+			document.iform.storage_path.value = decodeURIComponent('<?php echo urlencode($configuration['OwnCloud']['storage_path']);?>');
+			document.iform.download_path.value = decodeURIComponent('<?php echo urlencode($configuration['OwnCloud']['download_path']);?>');
+			$('#getinfo_url').html("<?php echo $configuration['OwnCloud']['url'];?>");
+			break;
+				
+		case 1:
+			document.iform.install.disabled = true;
+			document.iform.remove.disabled = true;
+			document.iform.storage_path.value = decodeURIComponent('<?php echo urlencode($configuration['NextCloud']['storage_path']);?>');
+			document.iform.download_path.value = decodeURIComponent('<?php echo urlencode($configuration['NextCloud']['download_path']);?>');
+			$('#getinfo_url').html("<?php echo $configuration['NextCloud']['url'];?>");
+			break;
+	}
 }
 //-->
 </script>
@@ -220,24 +262,30 @@ function enable_change(enable_change) {
         <?php if (!empty($input_errors)) print_input_errors($input_errors);?>
         <?php if (!empty($savemsg)) print_info_box($savemsg);?>
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
-            <?php html_titleline_checkbox("enable", gettext("OwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
+            <?php html_titleline_checkbox("enable", gettext("NextOwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
             <tr>
                 <td class="vncell"><?=gettext("Status")." ".gettext("Webserver");?></td>
                 <td class="vtable"><span name="getinfo_webserver" id="getinfo_webserver"><?=get_process_info()['webserver'];?></span></td>
             </tr>
-			<?php html_filechooser("storage_path", gettext("OwnCloud")." ".gettext("document root"), $configuration['storage_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("document root"), "<b>'{$config['websrv']['documentroot']}'</b>"), true, 60);?>
-			<?php html_filechooser("download_path", gettext("OwnCloud")." ".gettext("data folder"), $configuration['download_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("OwnCloud")." ".gettext("data folder"), "<b>'/mnt/'</b>").
+			<?php html_combobox("application", gettext("Application"), $configuration['application'], array('OwnCloud' =>'OwnCloud','NextCloud'=> 'NextCloud'), gettext("Choose application"), true, false, "change_application()");?>
+			<?php html_filechooser("storage_path", gettext("Document Root"), $configuration['storage_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("Document Root"), "<b>'{$config['websrv']['documentroot']}'</b>"), true, 60);?>
+			<?php html_filechooser("download_path", gettext("Data Folder"), $configuration['download_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("Data Folder"), "<b>'/mnt/'</b>").
             " ".gettext("Use this folder at the first login screen.").
             "<br /><b><font color='red'>".sprintf(gettext("For security reasons this folder should NOT be set to a directory below %s!"), $config['websrv']['documentroot'])."</font></b>", true, 60);?>
             <tr>
-                <td class="vncell"><?=gettext("OwnCloud")." ".gettext("URL");?></td>
-                <td class="vtable"><span name="getinfo_url" id="getinfo_url"><?=get_process_info()['url'];?></span></td>
+                <td class="vncell"><?=gettext("URL");?></td>
+                <td class="vtable"><span name="getinfo_url" id="getinfo_url"><?=$configuration['url']?></span></td>
             </tr>
         </table>
+        <div id="remarks">
+            <?php html_remark("note", gettext("Note"), sprintf(gettext("The values for <b>upload_max_filesize</b> and <b>post_max_size</b> will be set to 2 GB!"), ""));?>
+        </div>
         <div id="submit">
-			<input id="save" name="save" type="submit" class="formbtn" value="<?=gettext("Save");?>"/>
-            <input name="install" type="submit" class="formbtn" title="<?=gettext("OwnCloud")." ".gettext("Install");?>" value="<?=gettext("Install");?>" onclick="return confirm('<?=sprintf(gettext("Ready to install %s?"), gettext("OwnCloud"));?>')" />
+			<input name="save" type="submit" class="formbtn" value="<?=gettext("Save");?>"/>
+            <input name="install" type="submit" class="formbtn" value="<?=gettext("Install");?>" onclick="return confirm('<?=gettext("Ready to install?");?>')" />
+            <input name="remove" type="submit" class="formbtn" title="<?=gettext("Remove")." ".sprintf(gettext("the %s and the %s!"), gettext("Document Root"), gettext("Data Folder"));?>" 
+			value="<?=gettext("Remove");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be removed, all data will be deleted. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']));?>')" />
         </div>
 	</td></tr>
 	</table>

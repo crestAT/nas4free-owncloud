@@ -39,7 +39,7 @@ if (($configuration = load_config($config_file)) === false) {
     $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
 }
 
-$pgtitle = array(gettext("Extensions"), gettext("OwnCloud")." ".$configuration['version'], gettext("Maintenance"));
+$pgtitle = array(gettext("Extensions"), $configuration['appname']." ".$configuration['version'], gettext("Maintenance"));
 
 if (is_file("{$configuration['rootfolder']}/oneload")) { require_once("{$configuration['rootfolder']}/oneload"); }
 
@@ -61,7 +61,7 @@ if (is_array($config['rc']) && is_array($config['rc']['postinit']) && is_array( 
     }
 }
 // remove existing entries for new rc format
-if (is_array($config['rc']) && is_array($config['rc']['param'])) {
+if (is_array($config['rc']) && is_array($config['rc']['param']['0'])) {
 	$rc_param_count = count($config['rc']['param']);
     for ($i = 0; $i < $rc_param_count; $i++) {
         if (preg_match("/owncloud/", $config['rc']['param'][$i]['value'])) unset($config['rc']['param'][$i]);
