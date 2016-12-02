@@ -67,12 +67,12 @@ if ($return_val == 0) {
     }
     else { 
         $input_errors[] = sprintf(gettext("Archive file %s not found, installation aborted!"), "master.zip corrupt /"); 
-        return;
+        return 1;
     }
 }
 else { 
     $input_errors[] = sprintf(gettext("Archive file %s not found, installation aborted!"), "master.zip"); 
-    return;
+    return 1;
 }
 
 // install / update application on NAS4Free
