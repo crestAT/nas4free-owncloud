@@ -71,7 +71,7 @@ if (isset($_POST['ext_update']) && $_POST['ext_update']) {
     if ($return_val == 0) {
         require_once("{$configuration['rootfolder']}/owncloud-install.php"); 
         $version = exec("cat {$configuration['rootfolder']}/version.txt");
-        $savemsg .= sprintf(gettext("Update to version %s completed!"), $version);
+        $savemsg = sprintf(gettext("Update to version %s completed!"), $version);
         header("Refresh:8");;
     }
     else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), "owncloud-install.php"); }

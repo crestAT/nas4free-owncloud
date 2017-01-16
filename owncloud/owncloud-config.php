@@ -175,13 +175,6 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 					if (is_array($config['websrv'])) {									// Prepare Webserver for HSTS security
 						$rc_param_count = count($config['websrv']['auxparam']);
 						$rc_param_found = 0;
-						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/mod_setenv/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
-						if ($rc_param_found == 0) {
-							$config['websrv']['auxparam'][] = 'server.modules+=("mod_setenv")';
-							write_config();
-							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' server.modules+=("mod_setenv")';
-						}
-						$rc_param_found = 0;
 						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/Strict-Transport-Security/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
 						if ($rc_param_found == 0) {
 							$config['websrv']['auxparam'][] = '$HTTP["scheme"]=="https"{setenv.add-response-header=("Strict-Transport-Security"=>"max-age=63072000;includeSubdomains;")}';
