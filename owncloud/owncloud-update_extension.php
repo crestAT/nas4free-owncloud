@@ -2,7 +2,7 @@
 /*
     owncloud-update_extension.php
     
-    Copyright (c) 2013 - 2017 Andreas Schmidhuber
+    Copyright (c) 2015 - 2017 Andreas Schmidhuber <info@a3s.at>
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -31,11 +31,11 @@
  */
 require("auth.inc");
 require("guiconfig.inc");
-require_once("ext/owncloud/json.inc");
+require_once("ext/owncloud/extension-lib.inc");
 
 bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
-if (($configuration = load_config($config_file)) === false) {
+if (($configuration = ext_load_config($config_file)) === false) {
     $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
 }
 
@@ -53,20 +53,7 @@ else { $server_version = gettext("Unable to retrieve version from server!"); }
 
 if (isset($_POST['ext_remove']) && $_POST['ext_remove']) {
 // remove start/stop commands
-// remove existing old rc format entries
-if (is_array($config['rc']) && is_array($config['rc']['postinit']) && is_array( $config['rc']['postinit']['cmd'])) {
-    $rc_param_count = count($config['rc']['postinit']['cmd']);
-    for ($i = 0; $i < $rc_param_count; $i++) {
-        if (preg_match("/owncloud/", $config['rc']['postinit']['cmd'][$i])) unset($config['rc']['postinit']['cmd'][$i]);
-    }
-}
-// remove existing entries for new rc format
-if (is_array($config['rc']) && is_array($config['rc']['param']['0'])) {
-	$rc_param_count = count($config['rc']['param']);
-    for ($i = 0; $i < $rc_param_count; $i++) {
-        if (preg_match("/owncloud/", $config['rc']['param'][$i]['value'])) unset($config['rc']['param'][$i]);
-	}
-}
+	ext_remove_rc_commands("owncloud");
 // remove links
     if (is_link("/usr/local/share/locale-owncloud")) unlink("/usr/local/share/locale-owncloud");
     if (is_link("/usr/local/www/owncloud-config.php")) unlink("/usr/local/www/owncloud-config.php");
@@ -74,12 +61,13 @@ if (is_array($config['rc']) && is_array($config['rc']['param']['0'])) {
     if (is_link("/usr/local/www/ext/owncloud")) unlink("/usr/local/www/ext/owncloud");
     mwexec("rmdir -p /usr/local/www/ext");
     write_config();
+	mwexec("rm /usr/local/etc/php/nextowncloud-php.ini && service websrv restart");
 	header("Location:index.php");
 }
 
 if (isset($_POST['ext_update']) && $_POST['ext_update']) {
 // download installer & install
-    $return_val = mwexec("fetch -vo {$configuration['rootfolder']}/owncloud-install.php 'https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/owncloud-install.php'", true);
+    $return_val = mwexec("fetch -vo {$configuration['rootfolder']}/owncloud-install.php 'https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/owncloud-install.php'", false);
     if ($return_val == 0) {
         require_once("{$configuration['rootfolder']}/owncloud-install.php"); 
         $version = exec("cat {$configuration['rootfolder']}/version.txt");

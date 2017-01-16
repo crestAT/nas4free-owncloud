@@ -2,7 +2,7 @@
 /* 
     owncloud-install.php
     
-    Copyright (c) 2013 - 2017 Andreas Schmidhuber
+    Copyright (c) 2015 - 2017 Andreas Schmidhuber <info@a3s.at>
     All rights reserved.
     
     Redistribution and use in source and binary forms, with or without
@@ -29,13 +29,13 @@
     of the authors and should not be interpreted as representing official policies,
     either expressed or implied, of the FreeBSD Project.
 */
-$version = "v0.2";		// extension version
+$version = "v0.2.1";			// extension version
 $appname = "NextOwnCloud";		// extension name
+$config_name = "owncloud";
 
 require_once("config.inc");
 
 $install_dir = dirname(__FILE__);                           // get directory where the installer script resides
-$config_name = "owncloud";
 $version_striped = str_replace(".", "", $version);
 
 $arch = $g['arch'];
@@ -54,13 +54,13 @@ if ($release[0] >= 9.3) $verify_hostname = "--no-verify-hostname";
 else $verify_hostname = "";
 
 // fetch release archive
-$return_val = mwexec("fetch {$verify_hostname} -vo {$install_dir}/master.zip https://github.com/crestAT/nas4free-{$config_name}/releases/download/{$version}/{$config_name}-{$version_striped}.zip", true);
+$return_val = mwexec("fetch {$verify_hostname} -vo {$install_dir}/master.zip https://github.com/crestAT/nas4free-{$config_name}/releases/download/{$version}/{$config_name}-{$version_striped}.zip", false);
 if ($return_val == 0) {
     $return_val = mwexec("tar -xf {$install_dir}/master.zip -C {$install_dir}/ --exclude='.git*' --strip-components 2", true);
     if ($return_val == 0) {
         exec("rm {$install_dir}/master.zip");
         exec("chmod -R 775 {$install_dir}");
-        require_once("{$install_dir}/{$config_name}/json.inc");
+        require_once("{$install_dir}/{$config_name}/extension-lib.inc");
         $config_file = "{$install_dir}/{$config_name}/{$config_name}.conf";
         if (is_file("{$install_dir}/version.txt")) { $file_version = exec("cat {$install_dir}/version.txt"); }
         else { $file_version = "n/a"; }
@@ -76,7 +76,7 @@ else {
 }
 
 // install / update application on NAS4Free
-if (($configuration = load_config($config_file)) === false) {
+if (($configuration = ext_load_config($config_file)) === false) {
     $configuration = array();             // new installation
     $new_installation = true;    
 }
@@ -87,39 +87,12 @@ $configuration['postinit'] = "/usr/local/bin/php-cgi -f {$install_dir}/{$config_
 $configuration['OwnCloud']['source'] = "https://download.owncloud.org/community/owncloud-9.1.2.zip";
 $configuration['NextCloud']['source'] = "https://download.nextcloud.com/server/releases/nextcloud-10.0.1.zip";
 
-// remove start/stop commands
-// remove existing old rc format entries
-if (is_array($config['rc']) && is_array($config['rc']['postinit']) && is_array( $config['rc']['postinit']['cmd'])) {
-    $rc_param_count = count($config['rc']['postinit']['cmd']);
-    for ($i = 0; $i < $rc_param_count; $i++) {
-        if (preg_match("/{$config_name}/", $config['rc']['postinit']['cmd'][$i])) unset($config['rc']['postinit']['cmd'][$i]);
-    }
-}
-// remove existing entries for new rc format
-if (is_array($config['rc']) && is_array($config['rc']['param']['0'])) {
-	$rc_param_count = count($config['rc']['param']);
-    for ($i = 0; $i < $rc_param_count; $i++) {
-        if (preg_match("/{$config_name}/", $config['rc']['param'][$i]['value'])) unset($config['rc']['param'][$i]);
-	}
-}
-
-if ($release[0] >= 11.0) {	// new rc format
-	// postinit command
-	$rc_param = [];
-	$rc_param['uuid'] = uuid();
-	$rc_param['name'] = "{$appname} Extension";
-	$rc_param['value'] = $configuration['postinit'];
-	$rc_param['comment'] = "Start {$appname} Extension";
-	$rc_param['typeid'] = '2';
-	$rc_param['enable'] = true;
-	$config['rc']['param'][] = $rc_param;
-	$configuration['rc_uuid_start'] = $rc_param['uuid'];
-}
-else {
-    $config['rc']['postinit']['cmd'][$i] = $configuration['postinit'];
-}
-save_config($config_file, $configuration);
+ext_remove_rc_commands($config_name);
+$configuration['rc_uuid_start'] = $configuration['postinit'];
+ext_create_rc_commands($appname, $configuration['rc_uuid_start']);
 write_config();
+ext_save_config($config_file, $configuration);
+
 require_once("{$install_dir}/{$config_name}-start.php");
 if ($new_installation) echo "\nInstallation completed, use WebGUI | Extensions | ".$appname." to configure the application!\n";
 ?>

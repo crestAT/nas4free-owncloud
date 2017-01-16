@@ -1,4 +1,16 @@
 ﻿Version Date        Description
+0.2.1   2016.01.16  N: add additional warnings for webserver status
+                    N: add upload_tmp_dir to initial PHP configuration => /usr/local/etc/php/nextowncloud-php.ini
+                    N: add HSTS module parameters to Webserver auxiliary parameters
+                    N: add PHPInfo to Webserver document root
+                    C: permissions for Document Root and WebServer Upload Directory
+                    C: update German translation
+                    C: update Greek translation
+                    C: update Russian translation
+                    C: update Spanish translation
+                    C: update Swedish translation
+                    F: URL display in configuration page
+
 0.2     2016.12.01  Extension renamed to NextOwnCloud since it supports now both OwnCloud and NextCloud applications
                     N: support NextCloud application
                     N: check if the Webserver uses the default setting for 'Upload directory' and throw a warning eventually

@@ -2,7 +2,7 @@
 /* 
     owncloud-config.php
 
-    Copyright (c) 2013 - 2017 Andreas Schmidhuber
+    Copyright (c) 2015 - 2017 Andreas Schmidhuber <info@a3s.at>
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
  */
 require("auth.inc");
 require("guiconfig.inc");
-require_once("ext/owncloud/json.inc");
+require_once("ext/owncloud/extension-lib.inc");
 
 // Dummy standard message gettext calls for xgettext retrieval!!!
 $dummy = gettext("The changes have been applied successfully.");
@@ -40,14 +40,14 @@ $dummy = gettext("The following input errors were detected");
 
 bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
-if (($configuration = load_config($config_file)) === false) $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
+if (($configuration = ext_load_config($config_file)) === false) $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
+$errormsg = "";
 
 $pgtitle = array(gettext("Extensions"), $configuration['appname']." ".$configuration['version'], gettext("Configuration"));
 
 /* Get webserver status and IP@ */
 function get_process_info() {
-    global $config;
-    global $configuration;
+    global $config, $configuration, $errormsg;
 
     // Get webserver status
     $enable_webserver = isset($config['websrv']['enable']) ? true : false;
@@ -55,12 +55,17 @@ function get_process_info() {
     if ($enable_webserver) $enable_webserver_msg = '<a style=" background-color: #00ff00; ">&nbsp;&nbsp;<b>'.gettext("enabled").'</b>&nbsp;&nbsp;</a>';
     else $enable_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("disabled").'</b>&nbsp;&nbsp;</a>';
     if (0 === $status_webserver) $status_webserver_msg = '<a style=" background-color: #00ff00; ">&nbsp;&nbsp;<b>'.gettext("running").'</b>&nbsp;&nbsp;</a>';
-    else $status_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("stopped").'</b>&nbsp;&nbsp;</a>';
+    else {
+		$status_webserver_msg = '<a style=" background-color: #ff0000; ">&nbsp;&nbsp;<b>'.gettext("stopped").'</b>&nbsp;&nbsp;</a>';
+		$errormsg .= sprintf(gettext("The %s service is not active, it must be enabled and running to use %s!"), gettext("Webserver"), gettext($configuration['application']))."&nbsp;";
+	} 
 
     // check for standard Webserver upload directory
     if (($config['websrv']['uploaddir'] == "/var/tmp/ftmp") || ($config['websrv']['uploaddir'] == "")) {
     	$alert_title = sprintf(gettext("Change the %s in %s | %s to another path which has more disk space!"), gettext("Upload directory"), gettext("Services"), gettext("Webserver"));
-		$status_webserver_uploaddir = '<a title="'.$alert_title.' "style=" background-color: orange; ">&nbsp;&nbsp;<b>'.gettext("Upload directory")." ".gettext("is on default location, this could lead to upload problems for big files!").'</b>&nbsp;&nbsp;</a>';
+		$alert_text = gettext("Upload directory")." ".gettext("is on default location, this could lead to upload problems for big files!"); 
+		$status_webserver_uploaddir = '<a title="'.$alert_title.' "style=" background-color: orange; ">&nbsp;&nbsp;<b>'.$alert_text.'</b>&nbsp;&nbsp;</a>';
+		$errormsg .= $alert_text." ".$alert_title."&nbsp;";
 	}
 	else $status_webserver_uploaddir = "";
 	
@@ -109,12 +114,14 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
             $configuration['storage_path'] = rtrim($configuration['storage_path'],'/');         // ensure to have NO trailing slash
             if (strpos($configuration['storage_path'], "{$config['websrv']['documentroot']}") === false) {
                 $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext($configuration['application'])." ".gettext("Document Root"), "<b>'{$config['websrv']['documentroot']}'</b>");
+                $configuration['url'] = "";
             }
             else {
                 $configuration['download_path'] = !empty($_POST['download_path']) ? $_POST['download_path'] : $g['media_path'];
                 $configuration['download_path'] = rtrim($configuration['download_path'],'/');         // ensure to have NO trailing slash
                 if (strpos($configuration['download_path'], "/mnt/") === false) {
                     $input_errors[] = sprintf(gettext("The %s MUST be set to a directory below %s."), gettext($configuration['application'])." ".gettext("Data Folder"), "<b>'/mnt/'</b>");
+	                $configuration['url'] = "";
                 }
                 else {
                     // get the user for chown => <runasuser>server.username = "www"</runasuser> or if not set use "root"
@@ -130,19 +137,22 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                     if (!is_dir($configuration['download_path'])) mkdir($configuration['download_path'], 0775, true);
                     change_perms($configuration['download_path']);
                     chown($configuration['download_path'], $user);
+                	chown($config['websrv']['uploaddir'], $user);		// ensures to set the user has the right permission to write to the path 
 
 			        $ipaddr = get_ipaddr($config['interfaces']['lan']['if']);
 			        $owncloud_document_root = str_replace($config['websrv']['documentroot'], "", $configuration['storage_path']);
-			        $url = htmlspecialchars("{$config['websrv']['protocol']}://{$ipaddr}:{$config['websrv']['port']}{$owncloud_document_root}");
+			        $owncloud_document_root = trim($owncloud_document_root, " /");		// ensures to have no "/" at the beginning or end of the string
+			        $url = htmlspecialchars("{$config['websrv']['protocol']}://{$ipaddr}:{$config['websrv']['port']}/{$owncloud_document_root}");
 			        $configuration['url'] = "<a href='{$url}' target='_blank'>{$url}</a>";
+			        $phpinfo_url = htmlspecialchars("{$config['websrv']['protocol']}://{$ipaddr}:{$config['websrv']['port']}/nextowncloud-phpinfo.php");
+			        $configuration['phpinfo_url'] = "=&gt;&nbsp;<a href='{$phpinfo_url}' target='_blank'>PHPInfo</a>";
 
 					$configuration[$configuration['application']]['storage_path'] = $configuration['storage_path'];
 					$configuration[$configuration['application']]['download_path'] = $configuration['download_path'];
 					$configuration[$configuration['application']]['url'] = $configuration['url'];
 
-                    $savemsg .= get_std_save_message(save_config($config_file, $configuration))." ";
+                    $savemsg .= get_std_save_message(ext_save_config($config_file, $configuration))." ";
 
-                    require_once("{$configuration['rootfolder']}/owncloud-start.php");
                     if (isset($_POST['install']) && $_POST['install']) {
                         // download installer & install
                         $return_val = mwexec("fetch -vo {$configuration['storage_path']}/master.zip {$configuration[$configuration['application']]['source']}", true);
@@ -151,8 +161,9 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                             if ($return_val == 0) { 
                                 exec("rm {$configuration['storage_path']}/master.zip");
                                 copy("{$configuration['rootfolder']}/.user.ini", "{$configuration['storage_path']}/.user.ini");
-			                    mwexec("chown -R {$user}:{$user} {$configuration['storage_path']}", true);
-                                $savemsg .= "<br />".$configuration['application']." ".gettext("has been successfully installed."); 
+                                copy("{$configuration['rootfolder']}/nextowncloud-phpinfo.php", "{$config['websrv']['documentroot']}/nextowncloud-phpinfo.php");
+			                    mwexec("chown -R {$user} {$configuration['storage_path']}", true);
+								$savemsg .= "<br />".$configuration['application']." ".gettext("has been successfully installed.");
                             }
                             else {
                                 $input_errors[] = sprintf(gettext("Archive file %s not found, installation aborted!"), "master.zip corrupt /");
@@ -161,10 +172,28 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                         }
                         else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), $configuration[$configuration['application']]['source']); }
                     }
+					if (is_array($config['websrv'])) {									// Prepare Webserver for HSTS security
+						$rc_param_count = count($config['websrv']['auxparam']);
+						$rc_param_found = 0;
+						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/mod_setenv/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
+						if ($rc_param_found == 0) {
+							$config['websrv']['auxparam'][] = 'server.modules+=("mod_setenv")';
+							write_config();
+							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' server.modules+=("mod_setenv")';
+						}
+						$rc_param_found = 0;
+						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/Strict-Transport-Security/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
+						if ($rc_param_found == 0) {
+							$config['websrv']['auxparam'][] = '$HTTP["scheme"]=="https"{setenv.add-response-header=("Strict-Transport-Security"=>"max-age=63072000;includeSubdomains;")}';
+							write_config();
+							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' $HTTP["scheme"]=="https"{setenv.add-response-header=("Strict-Transport-Security"=>"max-age=63072000;includeSubdomains;")}';
+						}
+					}
+                    require_once("{$configuration['rootfolder']}/owncloud-start.php");	// Webserver restart with upload_tmp_dir & HSTS enabled
                 }
             }
         }   //Eo-post-enable
-        else $savemsg .= get_std_save_message(save_config($config_file, $configuration))." ";
+        else $savemsg .= get_std_save_message(ext_save_config($config_file, $configuration))." ";
     }   // Eo-empty input_errors
 }   // Eo-save-install
 
@@ -191,15 +220,9 @@ $configuration['storage_path'] = !empty($configuration['storage_path']) ? $confi
 $configuration['download_path'] = !empty($configuration['download_path']) ? $configuration['download_path'] : $configuration[$configuration['application']]['download_path'];
 $configuration['url'] = !empty($configuration['url']) ? $configuration['url'] : $configuration[$configuration['application']]['url'];
 
-$test_filename = "{$configuration['rootfolder']}/version_server.txt";
-if (!is_file($test_filename) || filemtime($test_filename) < time() - 86400) {	// test if file exists or is older than 24 hours
-	$return_val = mwexec("fetch -o {$test_filename} https://raw.github.com/crestAT/nas4free-owncloud/master/owncloud/version.txt", false);
-	if ($return_val == 0) {
-	    $server_version = exec("cat {$test_filename}");
-	    if ($server_version != $configuration['version']) { $savemsg .= sprintf(gettext("New extension version %s available, push '%s' button to install the new version!"), $server_version, gettext("Maintenance")); }
-	}
-}	//EOversion-check
+if (($message = ext_check_version("{$configuration['rootfolder']}/version_server.txt", "owncloud", $configuration['version'], gettext("Maintenance"))) !== false) $savemsg .= $message;
 
+get_process_info();
 if (is_ajax()) {
     $getinfo = get_process_info();
 	render_ajax($getinfo);
@@ -266,12 +289,13 @@ function change_application() {
 	</td></tr>
     <tr><td class="tabcont">
         <?php if (!empty($input_errors)) print_input_errors($input_errors);?>
+        <?php if (!empty($errormsg)) print_error_box($errormsg);?>
         <?php if (!empty($savemsg)) print_info_box($savemsg);?>
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
             <?php html_titleline_checkbox("enable", gettext("NextOwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
             <tr>
-                <td class="vncell"><?=gettext("Status")." ".gettext("Webserver");?></td>
+                <td class="vncell"><?=gettext("Webserver")." ".gettext("Status");?></td>
                 <td class="vtable"><span name="getinfo_webserver" id="getinfo_webserver"><?=get_process_info()['webserver'];?></span></td>
             </tr>
 			<?php html_combobox("application", gettext("Application"), $configuration['application'], array('OwnCloud' =>'OwnCloud','NextCloud'=> 'NextCloud'), gettext("Choose application"), true, false, "change_application()");?>
@@ -281,7 +305,17 @@ function change_application() {
             "<br /><b><font color='red'>".sprintf(gettext("For security reasons this folder should NOT be set to a directory below %s!"), $config['websrv']['documentroot'])."</font></b>", true, 60);?>
             <tr>
                 <td class="vncell"><?=gettext("URL");?></td>
-                <td class="vtable"><span name="getinfo_url" id="getinfo_url"><?=$configuration['url']?></span></td>
+                <td class="vtable">
+					<?php 
+						if (is_file("{$configuration['storage_path']}/.user.ini")) {
+							echo "<span id='getinfo_url'>{$configuration['url']}</span>&nbsp;&nbsp;&nbsp;";
+							if (is_file("{$config['websrv']['documentroot']}/nextowncloud-phpinfo.php")) {
+								echo "<span id='phpinfo_url'>{$configuration['phpinfo_url']}</span>";
+							}
+						}
+					?>
+						
+				</td>
             </tr>
         </table>
         <div id="remarks">
