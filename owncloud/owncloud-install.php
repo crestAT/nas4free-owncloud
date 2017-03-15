@@ -29,7 +29,7 @@
     of the authors and should not be interpreted as representing official policies,
     either expressed or implied, of the FreeBSD Project.
 */
-$version = "v0.2.1";			// extension version
+$version = "v0.2.2";			// extension version
 $appname = "NextOwnCloud";		// extension name
 $config_name = "owncloud";
 
@@ -84,13 +84,12 @@ $configuration['appname'] = $appname;
 $configuration['version'] = exec("cat {$install_dir}/version.txt");
 $configuration['rootfolder'] = $install_dir;
 $configuration['postinit'] = "/usr/local/bin/php-cgi -f {$install_dir}/{$config_name}-start.php";
-$configuration['OwnCloud']['source'] = "https://download.owncloud.org/community/owncloud-9.1.2.zip";
-$configuration['NextCloud']['source'] = "https://download.nextcloud.com/server/releases/nextcloud-10.0.1.zip";
+$configuration['OwnCloud']['source'] = "https://download.owncloud.org/download/community/owncloud-latest.zip";
+$configuration['NextCloud']['source'] = "https://download.nextcloud.com/server/releases/nextcloud-11.0.0.zip";
 
 ext_remove_rc_commands($config_name);
 $configuration['rc_uuid_start'] = $configuration['postinit'];
 ext_create_rc_commands($appname, $configuration['rc_uuid_start']);
-write_config();
 ext_save_config($config_file, $configuration);
 
 require_once("{$install_dir}/{$config_name}-start.php");

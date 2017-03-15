@@ -247,23 +247,23 @@ function enable_change(enable_change) {
 	document.iform.storage_pathbrowsebtn.disabled = endis;
 	document.iform.download_path.disabled = endis;
 	document.iform.download_pathbrowsebtn.disabled = endis;
-	document.iform.install.disabled = endis;
-	document.iform.remove.disabled = endis;
+	if (typeof document.iform.install !== "undefined") document.iform.install.disabled = endis;
+	if (typeof document.iform.remove !== "undefined") document.iform.remove.disabled = endis;
 }
 
 function change_application() {
 	switch(document.iform.application.selectedIndex) {
 		case 0:
-			document.iform.install.disabled = true;
-			document.iform.remove.disabled = true;
+			if (typeof document.iform.install !== "undefined") document.iform.install.disabled = true;
+			if (typeof document.iform.remove !== "undefined") document.iform.remove.disabled = true;
 			document.iform.storage_path.value = decodeURIComponent('<?php echo urlencode($configuration['OwnCloud']['storage_path']);?>');
 			document.iform.download_path.value = decodeURIComponent('<?php echo urlencode($configuration['OwnCloud']['download_path']);?>');
 			$('#getinfo_url').html("<?php echo $configuration['OwnCloud']['url'];?>");
 			break;
 				
 		case 1:
-			document.iform.install.disabled = true;
-			document.iform.remove.disabled = true;
+			if (typeof document.iform.install !== "undefined") document.iform.install.disabled = true;
+			if (typeof document.iform.remove !== "undefined") document.iform.remove.disabled = true;
 			document.iform.storage_path.value = decodeURIComponent('<?php echo urlencode($configuration['NextCloud']['storage_path']);?>');
 			document.iform.download_path.value = decodeURIComponent('<?php echo urlencode($configuration['NextCloud']['download_path']);?>');
 			$('#getinfo_url').html("<?php echo $configuration['NextCloud']['url'];?>");
@@ -287,6 +287,14 @@ function change_application() {
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
             <?php html_titleline_checkbox("enable", gettext("NextOwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
+            <?php
+				$curr_php = explode(".", PHP_VERSION);
+				if ($curr_php[0].".".$curr_php[1] > 7.0) {
+					if ($configuration['application'] == "OwnCloud") $out_str = "<a style='background-color: orange;'>&nbsp;<b>For this PHP version ownCloud 10.0.0 or higher is necessary, please check if this version is already available!</b>&nbsp;</a>"; 
+				}
+				else $out_str = "";
+				html_text("PHP_Version", gettext("PHP Version"), PHP_VERSION." ".$out_str);
+			?>
             <tr>
                 <td class="vncell"><?=gettext("Webserver")." ".gettext("Status");?></td>
                 <td class="vtable"><span name="getinfo_webserver" id="getinfo_webserver"><?=get_process_info()['webserver'];?></span></td>
@@ -299,15 +307,16 @@ function change_application() {
             <tr>
                 <td class="vncell"><?=gettext("URL");?></td>
                 <td class="vtable">
-					<?php 
-						if (is_file("{$configuration['storage_path']}/.user.ini")) {
-							echo "<span id='getinfo_url'>{$configuration['url']}</span>&nbsp;&nbsp;&nbsp;";
-							if (is_file("{$config['websrv']['documentroot']}/nextowncloud-phpinfo.php")) {
-								echo "<span id='phpinfo_url'>{$configuration['phpinfo_url']}</span>";
+					<?php
+						if ($configuration['enable']) {
+							if (is_file("{$configuration['storage_path']}/.user.ini")) {
+								echo "<span id='getinfo_url'>{$configuration['url']}</span>&nbsp;&nbsp;&nbsp;";
+								if (is_file("{$config['websrv']['documentroot']}/nextowncloud-phpinfo.php")) {
+									echo "<span id='phpinfo_url'>{$configuration['phpinfo_url']}</span>";
+								}
 							}
-						}
+						} 
 					?>
-						
 				</td>
             </tr>
         </table>
@@ -316,9 +325,14 @@ function change_application() {
         </div>
         <div id="submit">
 			<input name="save" type="submit" class="formbtn" value="<?=gettext("Save");?>"/>
-            <input name="install" type="submit" class="formbtn" value="<?=gettext("Install");?>" onclick="return confirm('<?=gettext("Ready to install?");?>')" />
-            <input name="remove" type="submit" class="formbtn" title="<?=gettext("Remove")." ".sprintf(gettext("the %s and the %s!"), gettext("Document Root"), gettext("Data Folder"));?>" 
-			value="<?=gettext("Remove");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be removed, all data will be deleted. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']));?>')" />
+			<?php if ($configuration['enable']):?>
+				<?php if (!is_file("{$configuration['storage_path']}/version.php")):?>
+					<input name="install" type="submit" class="formbtn" value="<?=gettext("Install");?>" onclick="return confirm('<?=gettext("Ready to install?");?>')" />
+				<?php else:?> 
+					<input name="remove" type="submit" class="formbtn" title="<?=gettext("Remove")." ".sprintf(gettext("the %s and the %s!"), gettext("Document Root"), gettext("Data Folder"));?>" 
+					value="<?=gettext("Remove");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be removed, all data will be deleted. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']));?>')" />
+				<?php endif;?>
+			<?php endif;?>
         </div>
 	</td></tr>
 	</table>
