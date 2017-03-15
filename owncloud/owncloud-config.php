@@ -287,6 +287,12 @@ function change_application() {
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
             <?php html_titleline_checkbox("enable", gettext("NextOwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
+            <?php
+				$curr_php = explode(".", PHP_VERSION);
+				if ($curr_php[0].".".$curr_php[1] > 7.0) $out_str = "!";
+				else $out_str = "";
+				html_text("PHP_Version", gettext("PHP Version"), PHP_VERSION." ".$out_str);
+			?>
             <tr>
                 <td class="vncell"><?=gettext("Webserver")." ".gettext("Status");?></td>
                 <td class="vtable"><span name="getinfo_webserver" id="getinfo_webserver"><?=get_process_info()['webserver'];?></span></td>
