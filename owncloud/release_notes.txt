@@ -1,4 +1,8 @@
 ﻿Version Date        Description
+0.3     2017.03.27  N: introduced backup & restore, for cron usage there are automatically created backup scripts
+                    N: add additional checks and warnings for data folder security
+                    C: update German translation
+
 0.2.2   2017.03.15  N: Catalan translation
                     C: update Dutch translation
                     C: update German translation
