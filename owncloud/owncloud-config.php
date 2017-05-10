@@ -391,12 +391,15 @@ function change_application() {
             <?php html_titleline_checkbox("enable", gettext("NextOwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
             <?php
+/* 
+ * no longer neccessary -> owncloud latest >= 10.0
 				$curr_php = explode(".", PHP_VERSION);
 				if ($curr_php[0].".".$curr_php[1] > 7.0) {
-					if ($configuration['application'] == "OwnCloud") $out_str = "<a style='background-color: orange;'>&nbsp;<b>For this PHP version ownCloud 10.0.0 or higher is necessary, please check if this version is already available!</b>&nbsp;</a>"; 
+					if ($configuration['application'] == "OwnCloud") $out_str = "<a style='background-color: orange;'>&nbsp;<b>For this PHP version ownCloud 10.0.0 or higher is necessary, please check if this version is already available!</b>&nbsp;</a>";
 				}
 				else $out_str = "";
 				html_text("PHP_Version", gettext("PHP Version"), PHP_VERSION." ".$out_str);
+ */
 			?>
             <tr>
                 <td class="vncell"><?=gettext("Webserver")." ".gettext("Status");?></td>

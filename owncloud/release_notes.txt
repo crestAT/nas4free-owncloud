@@ -1,4 +1,12 @@
 ﻿Version Date        Description
+0.3.1   2017.05.10  N: restore only userdata for manually installed/updated applications
+                    C: removed PHP 7.1 warning for ownCloud -> v10.0.0 is now available
+                    C: changed NextCloud download source to 'latest'
+                    C: update translations base file on Launchpad
+                    C: update German translation
+                    C: update Greek translation
+                    C: update Swedish translation
+
 0.3     2017.03.27  N: introduced backup & restore, for cron usage there are automatically created backup scripts
                     N: add additional checks and warnings for data folder security
                     C: update German translation
