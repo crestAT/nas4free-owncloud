@@ -229,6 +229,27 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 					fclose($restore_script);
 	                chmod("{$configuration['rootfolder']}/{$configuration['application']}-restore.sh", 0755);
 
+					$restore_script = fopen("{$configuration['rootfolder']}/{$configuration['application']}-restore_userdata.sh", "w");
+					fwrite($restore_script, "#!/bin/sh"."\n# WARNING: THIS IS AN AUTOMATICALLY CREATED SCRIPT, DO NOT CHANGE THE CONTENT!\n");
+					fwrite($restore_script, "RSYNC_LOGFILE={$rsync_logfile}"."\n");
+					fwrite($restore_script, "ERROR_COUNT=0"."\n");
+					fwrite($restore_script, "logger -p local4.notice {$configuration['application']} restore userdata started"."\n");
+					fwrite($restore_script, "/usr/local/bin/sudo -u {$configuration['webuser']} /usr/local/bin/php {$configuration['storage_path']}/occ maintenance:mode --no-warnings --on >> \$RSYNC_LOGFILE"."\n");
+					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error - set maintenance mode ON failed!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
+					fwrite($restore_script, "/usr/local/bin/rsync -Aax  --log-file=\$RSYNC_LOGFILE --delete {$configuration[$configuration['application']]['backup_path']}/APPLICATION/config {$configuration[$configuration['application']]['storage_path']}"."\n");
+					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error during rsync execution!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
+					fwrite($restore_script, "/usr/local/bin/rsync -Aax  --log-file=\$RSYNC_LOGFILE --delete {$configuration[$configuration['application']]['backup_path']}/APPLICATION/.user.ini {$configuration[$configuration['application']]['storage_path']}"."\n");
+					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error during rsync execution!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
+					fwrite($restore_script, "/usr/local/bin/rsync -Aax  --log-file=\$RSYNC_LOGFILE --delete {$configuration[$configuration['application']]['backup_path']}/APPLICATION/themes {$configuration[$configuration['application']]['storage_path']}"."\n");
+					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error during rsync execution!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
+					fwrite($restore_script, "/usr/local/bin/rsync -Aax  --log-file=\$RSYNC_LOGFILE --delete {$configuration[$configuration['application']]['backup_path']}/DATA/ {$configuration[$configuration['application']]['download_path']}"."\n");
+					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error during rsync execution!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
+					fwrite($restore_script, "/usr/local/bin/sudo -u {$configuration['webuser']} /usr/local/bin/php {$configuration['storage_path']}/occ maintenance:mode --no-warnings --off >> \$RSYNC_LOGFILE"."\n");
+					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error - set maintenance mode OFF failed!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
+					fwrite($restore_script, "logger -p local4.notice {$configuration['application']} restore userdata finished with \$ERROR_COUNT error\(s\)"."\n");
+					fclose($restore_script);
+	                chmod("{$configuration['rootfolder']}/{$configuration['application']}-restore_userdata.sh", 0755);
+
                 }
             }
         }   //Eo-post-enable
@@ -253,6 +274,11 @@ if (isset($_POST['backup']) && $_POST['backup']) {
 
 if (isset($_POST['restore']) && $_POST['restore']) {
 	mwexec("nohup {$configuration['rootfolder']}/{$configuration['application']}-restore.sh >/dev/null 2>&1 &", true);
+	$savemsg .= sprintf(gettext("%s started, output goes to %s"), gettext('Restore'), gettext('Diagnostics')." > ".gettext('Log')." > ".gettext('RSYNC - Client'));
+}
+
+if (isset($_POST['restore_userdata']) && $_POST['restore_userdata']) {
+	mwexec("nohup {$configuration['rootfolder']}/{$configuration['application']}-restore_userdata.sh >/dev/null 2>&1 &", true);
 	$savemsg .= sprintf(gettext("%s started, output goes to %s"), gettext('Restore'), gettext('Diagnostics')." > ".gettext('Log')." > ".gettext('RSYNC - Client'));
 }
 
@@ -322,6 +348,7 @@ function enable_change(enable_change) {
 	if (typeof document.iform.remove !== "undefined") document.iform.remove.disabled = endis;
 	if (typeof document.iform.backup !== "undefined") document.iform.backup.disabled = endis;
 	if (typeof document.iform.restore !== "undefined") document.iform.restore.disabled = endis;
+	if (typeof document.iform.restore_userdata !== "undefined") document.iform.restore_userdata.disabled = endis;
 }
 
 function change_application() {
@@ -329,6 +356,7 @@ function change_application() {
 	if (typeof document.iform.remove !== "undefined") document.iform.remove.disabled = true;
 	if (typeof document.iform.backup !== "undefined") document.iform.backup.disabled = true;
 	if (typeof document.iform.restore !== "undefined") document.iform.restore.disabled = true;
+	if (typeof document.iform.restore_userdata !== "undefined") document.iform.restore_userdata.disabled = true;
 	switch(document.iform.application.selectedIndex) {
 		case 0:
 			document.iform.storage_path.value = decodeURIComponent('<?php echo urlencode($configuration['OwnCloud']['storage_path']);?>');
@@ -363,12 +391,15 @@ function change_application() {
             <?php html_titleline_checkbox("enable", gettext("NextOwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
             <?php
+/* 
+ * no longer neccessary -> owncloud latest >= 10.0
 				$curr_php = explode(".", PHP_VERSION);
 				if ($curr_php[0].".".$curr_php[1] > 7.0) {
-					if ($configuration['application'] == "OwnCloud") $out_str = "<a style='background-color: orange;'>&nbsp;<b>For this PHP version ownCloud 10.0.0 or higher is necessary, please check if this version is already available!</b>&nbsp;</a>"; 
+					if ($configuration['application'] == "OwnCloud") $out_str = "<a style='background-color: orange;'>&nbsp;<b>For this PHP version ownCloud 10.0.0 or higher is necessary, please check if this version is already available!</b>&nbsp;</a>";
 				}
 				else $out_str = "";
 				html_text("PHP_Version", gettext("PHP Version"), PHP_VERSION." ".$out_str);
+ */
 			?>
             <tr>
                 <td class="vncell"><?=gettext("Webserver")." ".gettext("Status");?></td>
@@ -379,7 +410,7 @@ function change_application() {
 			<?php html_filechooser("download_path", gettext("Data Folder"), $configuration['download_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("Data Folder"), "<b>'/mnt/'</b>").
             " <b><font color='blue'>".gettext("Use this folder at the first login screen.")."</font></b>".
             "<br /><b><font color='red'>".sprintf(gettext("For security reasons this folder should NOT be set to a directory below %s!"), $config['websrv']['documentroot'])."</font></b>", true, 60);?>
-			<?php html_filechooser("backup_path", gettext("Backup Folder"), $configuration['backup_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("Data Folder"), "<b>'/mnt/'</b>"), true, 60);?>
+			<?php html_filechooser("backup_path", gettext("Backup Folder"), $configuration['backup_path'], sprintf(gettext("The %s MUST be set to a directory below %s."), gettext("Backup Folder"), "<b>'/mnt/'</b>"), true, 60);?>
             <?php html_text("last_backup", gettext("Last Backup"), exec("cat {$configuration['rootfolder']}/{$configuration['application']}-backup-date.txt"));?>
             <tr>
                 <td class="vncell"><?=gettext("URL");?></td>
@@ -398,9 +429,11 @@ function change_application() {
             </tr>
         </table>
         <div id="remarks">
-            <?php html_remark("note", gettext("Note"), sprintf(gettext("The values for <b>upload_max_filesize</b> and <b>post_max_size</b> will be set to 2 GB!"), ""));?>
+            <?php html_remark("note", gettext("Note"), gettext("The values for <b>upload_max_filesize</b> and <b>post_max_size</b> will be set to 2 GB!")."<br />".
+			sprintf(gettext("Use the %s WebGUI > 'Administration' to change values and to update the application."), $configuration['application'])."<br /><b>".
+			sprintf(gettext("Always perform a %s before an application update!"), gettext("Backup"))."</b>");?>
         </div>
-        <div id="submit">
+		<div id="submit">
 			<input name="save" type="submit" class="formbtn" value="<?=gettext("Save");?>"/>
 			<?php if ($configuration['enable']):?>
 				<?php if (!is_file("{$configuration['storage_path']}/version.php")):?>
@@ -412,6 +445,8 @@ function change_application() {
 					value="<?=gettext("Backup");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be backuped. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']));?>')" />
 					<input name="restore" type="submit" class="formbtn" title="<?=gettext("Restore")." ".sprintf(gettext("the %s and the %s!"), gettext("Document Root"), gettext("Data Folder"));?>"
 					value="<?=gettext("Restore");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be restored, the current installation will be overwritten with the backup from %s. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']), exec("cat {$configuration['rootfolder']}/{$configuration['application']}-backup-date.txt"));?>')" />
+					<input name="restore_userdata" type="submit" class="formbtn" title="<?=gettext("Restore Userdata")." ".sprintf(gettext("to a manually installed/updated %s installation!"), $configuration['application']);?>"
+					value="<?=gettext("Restore Userdata");?>" onclick="return confirm('<?=gettext("Restore Userdata")." ".sprintf(gettext("to a manually installed/updated %s installation!"), $configuration['application']);?>')" />
 				<?php endif;?>
 			<?php endif;?>
         </div>

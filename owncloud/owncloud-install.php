@@ -25,7 +25,7 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-$version = "v0.3";			// extension version
+$version = "v0.3.1";			// extension version
 $appname = "NextOwnCloud";		// extension name
 $config_name = "owncloud";
 
@@ -81,7 +81,7 @@ $configuration['version'] = exec("cat {$install_dir}/version.txt");
 $configuration['rootfolder'] = $install_dir;
 $configuration['postinit'] = "/usr/local/bin/php-cgi -f {$install_dir}/{$config_name}-start.php";
 $configuration['OwnCloud']['source'] = "https://download.owncloud.org/download/community/owncloud-latest.zip";
-$configuration['NextCloud']['source'] = "https://download.nextcloud.com/server/releases/nextcloud-11.0.0.zip";
+$configuration['NextCloud']['source'] = "https://download.nextcloud.com/server/releases/latest.zip";
 
 ext_remove_rc_commands($config_name);
 $configuration['rc_uuid_start'] = $configuration['postinit'];
