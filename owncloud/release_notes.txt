@@ -1,4 +1,13 @@
 ﻿Version Date        Description
+0.3.2   2017.08.24  N: set opcache.max_accelerated_files=10000 and opcache.revalidate_freq=1 to prevent application warnings
+                    N: add button 'Tune Cache' to activate the APCu memcache for Next/ownCloud
+                    F: create link to certificate /usr/local/etc/ssl/cert.pem if not already exists to prevent application updater problems
+                    C: update translations base file on Launchpad
+                    N: Kurdish translation
+                    C: update German translation
+                    C: update Greek translation
+                    C: update Turkish translation
+
 0.3.1   2017.05.10  N: restore only userdata for manually installed/updated applications
                     C: removed PHP 7.1 warning for ownCloud -> v10.0.0 is now available
                     C: changed NextCloud download source to 'latest'

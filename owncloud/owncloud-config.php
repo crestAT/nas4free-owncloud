@@ -210,7 +210,7 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 					fwrite($backup_script, "date > {$configuration['rootfolder']}/{$configuration['application']}-backup-date.txt"."\n");
 					fclose($backup_script);
 	                chmod("{$configuration['rootfolder']}/{$configuration['application']}-backup.sh", 0755); 
-					$savemsg .= "<br />".sprintf(gettext("Command for cron backup usage: %s"), "{$configuration['rootfolder']}/{$configuration['application']}-backup.sh");
+					$savemsg .= "<br />".sprintf(gettext("Command for cron backup usage: %s"), "{$configuration['rootfolder']}/{$configuration['application']}-backup.sh").".<br />";
 
 					$restore_script = fopen("{$configuration['rootfolder']}/{$configuration['application']}-restore.sh", "w");
 					fwrite($restore_script, "#!/bin/sh"."\n# WARNING: THIS IS AN AUTOMATICALLY CREATED SCRIPT, DO NOT CHANGE THE CONTENT!\n");
@@ -282,6 +282,19 @@ if (isset($_POST['restore_userdata']) && $_POST['restore_userdata']) {
 	$savemsg .= sprintf(gettext("%s started, output goes to %s"), gettext('Restore'), gettext('Diagnostics')." > ".gettext('Log')." > ".gettext('RSYNC - Client'));
 }
 
+if (isset($_POST['tune_cache']) && $_POST['tune_cache']) {
+	$return_val = mwexec("cat {$configuration['storage_path']}/config/config.php | grep memcache.local");
+	if ($return_val != 0) {
+		include("{$configuration['storage_path']}/config/config.php");
+		$CONFIG['memcache.local'] = '\OC\Memcache\APCu';
+		$patch = "<?php\n".'$CONFIG = '.var_export($CONFIG, true).";\n";
+		mwexec("/usr/local/bin/sudo -u {$configuration['webuser']} /usr/local/bin/php {$configuration['storage_path']}/occ maintenance:mode --no-warnings --on", true);
+		file_put_contents("{$configuration['storage_path']}/config/config.php", $patch);
+		mwexec("/usr/local/bin/sudo -u {$configuration['webuser']} /usr/local/bin/php {$configuration['storage_path']}/occ maintenance:mode --no-warnings --off", true);
+	}
+	$savemsg .= gettext("APCu memcache is now activated.")."<br />";
+}
+
 // initialize params for first run
 $configuration['application'] = !empty($configuration['application']) ? $configuration['application'] : "OwnCloud";
 $configuration['OwnCloud']['storage_path'] = !empty($configuration['OwnCloud']['storage_path']) ? $configuration['OwnCloud']['storage_path'] : str_replace("//", "/", $config['websrv']['documentroot']."/owncloud");
@@ -307,6 +320,10 @@ if (($configuration['enable']) && (is_file("{$configuration['storage_path']}/con
 		$input_errors[] = sprintf(gettext("The %s is not used in your current %s configuration!"), gettext("Data Folder"), gettext($configuration['application']));
 		$input_errors[] = sprintf(gettext("For security reasons this folder should NOT be set to a directory below %s!"), $config['websrv']['documentroot']);
 		$input_errors[] = sprintf(gettext("It is strongly recommended to remove and repeat the %s installation!"), gettext($configuration['application']));
+	}
+	$return_val = mwexec("cat {$configuration['storage_path']}/config/config.php | grep memcache.local");
+	if ($return_val != 0) {
+		$savemsg .= sprintf(gettext("No memory cache has been configured for %s. Use %s to activate the APCu memcache."), gettext($configuration['application']), gettext("Tune Cache"));
 	}
 }
 
@@ -431,7 +448,7 @@ function change_application() {
         <div id="remarks">
             <?php html_remark("note", gettext("Note"), gettext("The values for <b>upload_max_filesize</b> and <b>post_max_size</b> will be set to 2 GB!")."<br />".
 			sprintf(gettext("Use the %s WebGUI > 'Administration' to change values and to update the application."), $configuration['application'])."<br /><b>".
-			sprintf(gettext("Always perform a %s before an application update!"), gettext("Backup"))."</b>");?>
+			sprintf(gettext("Always perform a %s prior to an application update!"), gettext("Backup"))."</b>");?>
         </div>
 		<div id="submit">
 			<input name="save" type="submit" class="formbtn" value="<?=gettext("Save");?>"/>
@@ -439,14 +456,21 @@ function change_application() {
 				<?php if (!is_file("{$configuration['storage_path']}/version.php")):?>
 					<input name="install" type="submit" class="formbtn" value="<?=gettext("Install");?>" onclick="return confirm('<?=gettext("Ready to install?");?>')" />
 				<?php else:?> 
-					<input name="remove" type="submit" class="formbtn" title="<?=gettext("Remove")." ".sprintf(gettext("the %s and the %s!"), gettext("Document Root"), gettext("Data Folder"));?>"
-					value="<?=gettext("Remove");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be removed, all data will be deleted. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']));?>')" />
+					<input name="remove" type="submit" class="formbtn" title="<?=gettext("Remove")." ".sprintf(gettext("the %s application. The %s and the %s will be deleted!"), $configuration['application'], gettext("Document Root"), gettext("Data Folder"));?>"
+					value="<?=gettext("Remove");?>" onclick="return confirm('<?=sprintf(gettext("The application will be removed, all data in the %s (%s) and the %s (%s) will be deleted. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']));?>')" />
 					<input name="backup" type="submit" class="formbtn" title="<?=gettext("Backup")." ".sprintf(gettext("the %s and the %s!"), gettext("Document Root"), gettext("Data Folder"));?>"
 					value="<?=gettext("Backup");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be backuped. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']));?>')" />
 					<input name="restore" type="submit" class="formbtn" title="<?=gettext("Restore")." ".sprintf(gettext("the %s and the %s!"), gettext("Document Root"), gettext("Data Folder"));?>"
 					value="<?=gettext("Restore");?>" onclick="return confirm('<?=sprintf(gettext("The %s (%s) and the %s (%s) will be restored, the current installation will be overwritten with the backup from %s. Ready to proceed?"), gettext("Document Root"), gettext($configuration['storage_path']), gettext("Data Folder"), gettext($configuration['download_path']), exec("cat {$configuration['rootfolder']}/{$configuration['application']}-backup-date.txt"));?>')" />
 					<input name="restore_userdata" type="submit" class="formbtn" title="<?=gettext("Restore Userdata")." ".sprintf(gettext("to a manually installed/updated %s installation!"), $configuration['application']);?>"
 					value="<?=gettext("Restore Userdata");?>" onclick="return confirm('<?=gettext("Restore Userdata")." ".sprintf(gettext("to a manually installed/updated %s installation!"), $configuration['application']);?>')" />
+					<?php if (($configuration['enable']) && (is_file("{$configuration['storage_path']}/config/config.php"))):?>
+						<?php $return_val = mwexec("cat {$configuration['storage_path']}/config/config.php | grep memcache.local");
+							if ($return_val != 0):?>
+								<input name="tune_cache" type="submit" class="formbtn" title="<?=gettext("Tune Cache")." ".gettext("to activate the APCu memcache");?>"
+								value="<?=gettext("Tune Cache");?>" onclick="return confirm('<?=gettext("Tune Cache")." ".gettext("to activate the APCu memcache")."?";?>')" />
+							<?php endif;?>
+					<?php endif;?>
 				<?php endif;?>
 			<?php endif;?>
         </div>
