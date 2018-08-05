@@ -2,7 +2,7 @@
 /* 
     owncloud-install.php
     
-    Copyright (c) 2015 - 2017 Andreas Schmidhuber <info@a3s.at>
+    Copyright (c) 2015 - 2018 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-$version = "v0.3.2";			// extension version
+$version = "v0.3.2.1";			// extension version
 $appname = "NextOwnCloud";		// extension name
 $config_name = "owncloud";
 

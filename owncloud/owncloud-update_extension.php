@@ -2,7 +2,7 @@
 /*
     owncloud-update_extension.php
     
-    Copyright (c) 2015 - 2017 Andreas Schmidhuber <info@a3s.at>
+    Copyright (c) 2015 - 2018 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,8 @@ require("auth.inc");
 require("guiconfig.inc");
 require_once("ext/owncloud/extension-lib.inc");
 
-bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
+$domain = strtolower(get_product_name());
+bindtextdomain($domain, "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
 if (($configuration = ext_load_config($config_file)) === false) {
     $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
@@ -73,9 +74,9 @@ if (isset($_POST['ext_update']) && $_POST['ext_update']) {
     else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), "owncloud-install.php"); }
 }
 
-bindtextdomain("nas4free", "/usr/local/share/locale");                  // to get the right main menu language
+bindtextdomain($domain, "/usr/local/share/locale");                  // to get the right main menu language
 include("fbegin.inc");
-bindtextdomain("nas4free", "/usr/local/share/locale-owncloud"); ?>
+bindtextdomain($domain, "/usr/local/share/locale-owncloud"); ?>
 <!-- The Spinner Elements -->
 <?php include("ext/owncloud/spinner.inc");?>
 <script src="ext/owncloud/spin.min.js"></script>

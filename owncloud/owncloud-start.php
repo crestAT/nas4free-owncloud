@@ -2,7 +2,7 @@
 /*
     owncloud-start.php 
 
-    Copyright (c) 2015 - 2017 Andreas Schmidhuber <info@a3s.at>
+    Copyright (c) 2015 - 2018 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -48,6 +48,12 @@ if (!is_file("/usr/local/share/certs/ca-root-nss.crt")) {
 	$return_val += mwexec("mkdir -p /usr/local/share/certs", true);
 	$return_val += mwexec("ln -sw /usr/local/etc/ssl/cert.pem /usr/local/share/certs/ca-root-nss.crt", true);
 }
+// check for product name and eventually rename translation files for new product name (XigmaNAS)
+$domain = strtolower(get_product_name());
+if ($domain <> "nas4free") {
+	$return_val += mwexec("find {$rootfolder}/locale-owncloud -name nas4free.mo -execdir mv nas4free.mo {$domain}.mo \;", true);
+}
+
 if ($return_val == 0) mwexec("logger nextowncloud-extension: GUI loaded");
 else mwexec("logger nextowncloud-extension: error(s) during startup, failed with return value = {$return_val}"); 
 ?>

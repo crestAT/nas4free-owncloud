@@ -2,7 +2,7 @@
 /* 
     owncloud-config.php
 
-    Copyright (c) 2015 - 2017 Andreas Schmidhuber <info@a3s.at>
+    Copyright (c) 2015 - 2018 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,8 @@ $dummy = gettext("The changes have been applied successfully.");
 $dummy = gettext("The configuration has been changed.<br />You must apply the changes in order for them to take effect.");
 $dummy = gettext("The following input errors were detected");
 
-bindtextdomain("nas4free", "/usr/local/share/locale-owncloud");
+$domain = strtolower(get_product_name());
+bindtextdomain($domain, "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
 if (($configuration = ext_load_config($config_file)) === false) $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
 $errormsg = "";
@@ -333,9 +334,10 @@ if (is_ajax()) {
 	render_ajax($getinfo);
 }
 
-bindtextdomain("nas4free", "/usr/local/share/locale");                  // to get the right main menu language
+bindtextdomain($domain, "/usr/local/share/locale");                  // to get the right main menu language
 include("fbegin.inc");
-bindtextdomain("nas4free", "/usr/local/share/locale-owncloud"); ?>
+bindtextdomain($domain, "/usr/local/share/locale-owncloud"); 
+?>
 <script type="text/javascript">//<![CDATA[
 $(document).ready(function(){
 	var gui = new GUI;

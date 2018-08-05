@@ -2,7 +2,7 @@
 /*
 	extension-lib.inc
 
-    Copyright (c) 2016 - 2017 Andreas Schmidhuber <info@a3s.at>
+    Copyright (c) 2016 - 2018 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without

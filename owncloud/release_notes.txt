@@ -1,4 +1,17 @@
 ﻿Version Date        Description
+0.3.2.1 2018.08.05  F: GUI translations not working due to name change to XigmaNAS
+                    N: Arabic translation
+                    N: Czech translation
+                    N: Slovenian translation
+                    C: update French translation
+                    C: update German translation
+                    C: update Greek translation
+                    C: update Italian translation
+                    C: update Russian translation
+                    C: update Spanish translation
+                    C: update Swedish translation
+                    C: update Ukrainian translation
+
 0.3.2   2017.08.24  N: set opcache.max_accelerated_files=10000 and opcache.revalidate_freq=1 to prevent application warnings
                     N: add button 'Tune Cache' to activate the APCu memcache for Next/ownCloud
                     F: create link to certificate /usr/local/etc/ssl/cert.pem if not already exists to prevent application updater problems
