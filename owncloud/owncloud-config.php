@@ -167,7 +167,6 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                             $return_val = mwexec("tar -xf {$configuration['storage_path']}/master.zip -C {$configuration['storage_path']}/  --strip-components 1", false);
                             if ($return_val == 0) { 
                                 exec("rm {$configuration['storage_path']}/master.zip");
-                                copy("{$configuration['rootfolder']}/.user.ini", "{$configuration['storage_path']}/.user.ini");
                                 copy("{$configuration['rootfolder']}/nextowncloud-phpinfo.php", "{$config['websrv']['documentroot']}/nextowncloud-phpinfo.php");
 			                    mwexec("chown -R {$user} {$configuration['storage_path']}", true);
 								$savemsg = $configuration['application']." ".gettext("has been successfully installed.");
@@ -238,8 +237,6 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 					fwrite($restore_script, "/usr/local/bin/sudo -u {$configuration['webuser']} /usr/local/bin/php {$configuration['storage_path']}/occ maintenance:mode --no-warnings --on >> \$RSYNC_LOGFILE"."\n");
 					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error - set maintenance mode ON failed!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
 					fwrite($restore_script, "/usr/local/bin/rsync -Aax  --log-file=\$RSYNC_LOGFILE --delete {$configuration[$configuration['application']]['backup_path']}/APPLICATION/config {$configuration[$configuration['application']]['storage_path']}"."\n");
-					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error during rsync execution!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
-					fwrite($restore_script, "/usr/local/bin/rsync -Aax  --log-file=\$RSYNC_LOGFILE --delete {$configuration[$configuration['application']]['backup_path']}/APPLICATION/.user.ini {$configuration[$configuration['application']]['storage_path']}"."\n");
 					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error during rsync execution!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
 					fwrite($restore_script, "/usr/local/bin/rsync -Aax  --log-file=\$RSYNC_LOGFILE --delete {$configuration[$configuration['application']]['backup_path']}/APPLICATION/themes {$configuration[$configuration['application']]['storage_path']}"."\n");
 					fwrite($restore_script, "if [ $? -ne 0 ]; then echo 'Error during rsync execution!' >> \$RSYNC_LOGFILE; ERROR_COUNT=$((ERROR_COUNT+1)); fi"."\n");
@@ -347,11 +344,6 @@ $(document).ready(function(){
 });
 //]]>
 </script>
-<!-- The Spinner Elements -->
-<?php include("ext/owncloud/spinner.inc");?>
-<script src="ext/owncloud/spin.min.js"></script>
-<!-- use: onsubmit="spinner()" within the form tag -->
-
 <script type="text/javascript">
 <!--
 function enable_change(enable_change) {
@@ -409,17 +401,6 @@ function change_application() {
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
             <?php html_titleline_checkbox("enable", gettext("NextOwnCloud"), $configuration['enable'], gettext("Enable"), "enable_change(false)");?>
             <?php html_text("installation_directory", gettext("Installation directory"), sprintf(gettext("The extension is installed in %s"), $configuration['rootfolder']));?>
-            <?php
-/* 
- * no longer neccessary -> owncloud latest >= 10.0
-				$curr_php = explode(".", PHP_VERSION);
-				if ($curr_php[0].".".$curr_php[1] > 7.0) {
-					if ($configuration['application'] == "OwnCloud") $out_str = "<a style='background-color: orange;'>&nbsp;<b>For this PHP version ownCloud 10.0.0 or higher is necessary, please check if this version is already available!</b>&nbsp;</a>";
-				}
-				else $out_str = "";
-				html_text("PHP_Version", gettext("PHP Version"), PHP_VERSION." ".$out_str);
- */
-			?>
             <tr>
                 <td class="vncell"><?=gettext("Webserver")." ".gettext("Status");?></td>
                 <td class="vtable"><span name="getinfo_webserver" id="getinfo_webserver"><?=get_process_info()['webserver'];?></span></td>
@@ -436,7 +417,7 @@ function change_application() {
                 <td class="vtable">
 					<?php
 						if ($configuration['enable']) {
-							if (is_file("{$configuration['storage_path']}/.user.ini")) {
+							if (is_file("{$configuration['storage_path']}/index.php")) {
 								echo "<span id='getinfo_url'>{$configuration['url']}</span>&nbsp;&nbsp;&nbsp;";
 								if (is_file("{$config['websrv']['documentroot']}/nextowncloud-phpinfo.php")) {
 									echo "<span id='phpinfo_url'>{$configuration['phpinfo_url']}</span>";
@@ -448,9 +429,9 @@ function change_application() {
             </tr>
         </table>
         <div id="remarks">
-            <?php html_remark("note", gettext("Note"), gettext("The values for <b>upload_max_filesize</b> and <b>post_max_size</b> will be set to 2 GB!")."<br />".
-			sprintf(gettext("Use the %s WebGUI > 'Administration' to change values and to update the application."), $configuration['application'])."<br /><b>".
-			sprintf(gettext("Always perform a %s prior to an application update!"), gettext("Backup"))."</b>");?>
+            <?php html_remark("note", 
+				sprintf(gettext("Use the %s WebGUI > 'Administration' to change values and to update the application."), $configuration['application'])."<br /><b>".
+				sprintf(gettext("Always perform a %s prior to an application update!"), gettext("Backup"))."</b>");?>
         </div>
 		<div id="submit">
 			<input name="save" type="submit" class="formbtn" value="<?=gettext("Save");?>"/>

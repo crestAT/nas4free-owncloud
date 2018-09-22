@@ -1,4 +1,7 @@
 ﻿Version Date        Description
+0.3.2.2 2018.09.23  F: remove predefined user.ini to prevent error message in ownCloud
+                    C: update Ukrainian translation
+
 0.3.2.1 2018.08.05  F: GUI translations not working due to name change to XigmaNAS
                     N: Arabic translation
                     N: Czech translation

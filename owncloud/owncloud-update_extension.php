@@ -76,12 +76,8 @@ if (isset($_POST['ext_update']) && $_POST['ext_update']) {
 
 bindtextdomain($domain, "/usr/local/share/locale");                  // to get the right main menu language
 include("fbegin.inc");
-bindtextdomain($domain, "/usr/local/share/locale-owncloud"); ?>
-<!-- The Spinner Elements -->
-<?php include("ext/owncloud/spinner.inc");?>
-<script src="ext/owncloud/spin.min.js"></script>
-<!-- use: onsubmit="spinner()" within the form tag -->
-
+bindtextdomain($domain, "/usr/local/share/locale-owncloud"); 
+?>
 <form action="owncloud-update_extension.php" method="post" name="iform" id="iform" onsubmit="spinner()">
 <table width="100%" border="0" cellpadding="0" cellspacing="0">
 	<tr><td class="tabnavtbl">
