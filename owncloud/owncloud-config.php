@@ -199,7 +199,7 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 						}
 						// check for remote.php/dav => NC v14.0.3
 						$rc_param_found = 0;
-						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/remote.php/dav/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
+						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/remote.php\/dav/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
 						if ($rc_param_found == 0) {
 							$config['websrv']['auxparam'][] = 'url.redirect = ("^/.well-known/caldav"  => "/nextcloud/remote.php/dav", "^/.well-known/carddav" => "/nextcloud/remote.php/dav")';
 							write_config();
