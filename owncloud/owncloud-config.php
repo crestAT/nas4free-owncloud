@@ -96,7 +96,7 @@ function change_perms($dir) {
                 exec("chmod 775 {$directory}");                         // set permissions to 775
             }
             else $input_errors[] = sprintf(gettext("%s needs at least read & execute permissions at the mount point for directory %s! Set the Read and Execute bits for Others (Access Restrictions | Mode) for the mount point %s (in <a href='disks_mount.php'>Disks | Mount Point | Management</a> or <a href='disks_zfs_dataset.php'>Disks | ZFS | Datasets</a>) and hit Save in order to take them effect."), 
-                gettext("OwnCloud"), $path, "/{$path_check[1]}/{$path_check[2]}");
+                gettext("NextOwnCloud"), $path, "/{$path_check[1]}/{$path_check[2]}");
         }
     }
 }
@@ -181,12 +181,29 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                     }
 					if (is_array($config['websrv'])) {									// Prepare Webserver for HSTS security
 						$rc_param_count = count($config['websrv']['auxparam']);
+						// check for Strict-Transport-Security
 						$rc_param_found = 0;
 						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/Strict-Transport-Security/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
 						if ($rc_param_found == 0) {
 							$config['websrv']['auxparam'][] = '$HTTP["scheme"]=="https"{setenv.add-response-header=("Strict-Transport-Security"=>"max-age=63072000;includeSubdomains;")}';
 							write_config();
 							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' $HTTP["scheme"]=="https"{setenv.add-response-header=("Strict-Transport-Security"=>"max-age=63072000;includeSubdomains;")}';
+						}
+						// check for Referrer-Policy => NC v14.0.3
+						$rc_param_found = 0;
+						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/Referrer-Policy/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
+						if ($rc_param_found == 0) {
+							$config['websrv']['auxparam'][] = 'setenv.set-response-header = ("Referrer-Policy"=>"no-referrer")';
+							write_config();
+							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' setenv.set-response-header = ("Referrer-Policy"=>"no-referrer")';
+						}
+						// check for remote.php/dav => NC v14.0.3
+						$rc_param_found = 0;
+						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/remote.php/dav/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
+						if ($rc_param_found == 0) {
+							$config['websrv']['auxparam'][] = 'url.redirect = ("^/.well-known/caldav"  => "/nextcloud/remote.php/dav", "^/.well-known/carddav" => "/nextcloud/remote.php/dav")';
+							write_config();
+							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' url.redirect = ("^/.well-known/caldav"  => "/nextcloud/remote.php/dav", "^/.well-known/carddav" => "/nextcloud/remote.php/dav")';
 						}
 					}
                     require_once("{$configuration['rootfolder']}/owncloud-start.php");	// Webserver restart with upload_tmp_dir & HSTS enabled
@@ -429,7 +446,7 @@ function change_application() {
             </tr>
         </table>
         <div id="remarks">
-            <?php html_remark("note", 
+            <?php html_remark("note", gettext("Note"), 
 				sprintf(gettext("Use the %s WebGUI > 'Administration' to change values and to update the application."), $configuration['application'])."<br /><b>".
 				sprintf(gettext("Always perform a %s prior to an application update!"), gettext("Backup"))."</b>");?>
         </div>

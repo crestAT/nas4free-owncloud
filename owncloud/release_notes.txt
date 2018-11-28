@@ -1,4 +1,14 @@
 ﻿Version Date        Description
+0.3.3   2018.11.28  N: add smbclient PHP extension for external storage support
+                    N: add to Webserver > Auxparam:
+                        setenv.set-response-header = ("Referrer-Policy"=>"no-referrer")
+                        url.redirect = (
+                            "^/.well-known/caldav"  => "/nextcloud/remote.php/dav", 
+                            "^/.well-known/carddav" => "/nextcloud/remote.php/dav"
+                        )
+                       to prevent application warnings
+                    C: update Spanish translation
+
 0.3.2.2 2018.09.23  F: remove predefined user.ini to prevent error message in ownCloud
                     C: update Ukrainian translation
 

@@ -25,7 +25,7 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-$version = "v0.3.2.2";			// extension version
+$version = "v0.3.3";			// extension version
 $appname = "NextOwnCloud";		// extension name
 $config_name = "owncloud";
 

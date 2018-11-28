@@ -34,7 +34,8 @@ bindtextdomain($domain, "/usr/local/share/locale-owncloud");
 $config_file = "ext/owncloud/owncloud.conf";
 if (($configuration = ext_load_config($config_file)) === false) {
     $input_errors[] = sprintf(gettext("Configuration file %s not found!"), "owncloud.conf");
-}
+    $exitExtension = true;
+} else $exitExtension = false; 
 
 $pgtitle = array(gettext("Extensions"), $configuration['appname']." ".$configuration['version'], gettext("Maintenance"));
 
@@ -57,8 +58,11 @@ if (isset($_POST['ext_remove']) && $_POST['ext_remove']) {
     if (is_link("/usr/local/www/owncloud-update_extension.php")) unlink("/usr/local/www/owncloud-update_extension.php");
     if (is_link("/usr/local/www/ext/owncloud")) unlink("/usr/local/www/ext/owncloud");
     mwexec("rmdir -p /usr/local/www/ext");
+	if (is_file("/usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so")) unlink("/usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so");
+	if (is_file("/usr/local/etc/php/ext-20-smbclient.ini")) unlink("/usr/local/etc/php/ext-20-smbclient.ini");
     write_config();
 	mwexec("rm /usr/local/etc/php/nextowncloud-php.ini && service websrv restart");
+    mwexec("rm -R {$configuration['rootfolder']}");
 	header("Location:index.php");
 }
 
@@ -87,7 +91,12 @@ bindtextdomain($domain, "/usr/local/share/locale-owncloud");
 		</ul>
 	</td></tr>
 	<tr><td class="tabcont">
-        <?php if (!empty($input_errors)) print_input_errors($input_errors);?>
+        <?php 
+			if (!empty($input_errors)) { 
+				print_input_errors($input_errors);
+				if ($exitExtension) exit;
+			}
+		?>
         <?php if (!empty($savemsg)) print_info_box($savemsg);?>
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
             <?php html_titleline(gettext("Extension Update"));?>
@@ -96,10 +105,14 @@ bindtextdomain($domain, "/usr/local/share/locale-owncloud");
 			<?php html_separator();?>
         </table>
         <div id="update_remarks">
-            <?php html_remark("note_remove", gettext("Note"), sprintf(gettext("Removing %s integration from NAS4Free will leave the installation folder untouched - remove the files using Windows Explorer, FTP or some other tool of your choice. <br /><b>Please note: this page will no longer be available.</b> You'll have to re-run %s extension installation to get it back on your NAS4Free."), $configuration['appname'], $configuration['appname']));?>
+            <?php html_remark("note_remove", gettext("Note"),
+				gettext("Removing the extension will delete all extension folders including the data folders from the system."));
+			?>
             <br />
-            <input id="ext_update" name="ext_update" type="submit" class="formbtn" value="<?=gettext("Update Extension");?>" onclick="return confirm('<?=gettext("The selected operation will be completed. Please do not click any other buttons!");?>')" />
-            <input id="ext_remove" name="ext_remove" type="submit" class="formbtn" value="<?=gettext("Remove Extension");?>" onclick="return confirm('<?=gettext("Do you really want to remove the extension from the system?");?>')" />
+            <input id="ext_update" name="ext_update" type="submit" class="formbtn" value="<?=gettext("Update Extension");?>" 
+				onclick="return confirm('<?=gettext("The selected operation will be completed. Please do not click any other buttons!");?>')" />
+            <input id="ext_remove" name="ext_remove" type="submit" class="formbtn" value="<?=gettext("Remove Extension");?>" 
+				onclick="return confirm('<?=gettext("Do you really want to remove the extension from the system?");?>')" />
         </div>
         <table width="100%" border="0" cellpadding="6" cellspacing="0">
 			<?php html_separator();?>

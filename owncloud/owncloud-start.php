@@ -28,26 +28,26 @@
 require_once("config.inc");
 $rootfolder = dirname(__FILE__);
 
-if (is_link("/usr/local/share/locale-owncloud")) unlink("/usr/local/share/locale-owncloud");
-if (is_link("/usr/local/www/owncloud-config.php")) unlink("/usr/local/www/owncloud-config.php");
-if (is_link("/usr/local/www/owncloud-update_extension.php")) unlink("/usr/local/www/owncloud-update_extension.php");
-if (is_link("/usr/local/www/ext/owncloud")) unlink("/usr/local/www/ext/owncloud");
-mwexec("rmdir -p /usr/local/www/ext");
 $return_val = 0; 
 // create links to extension files
-$return_val += mwexec("ln -sw {$rootfolder}/locale-owncloud /usr/local/share/", true);
-$return_val += mwexec("ln -sw {$rootfolder}/owncloud-config.php /usr/local/www/owncloud-config.php", true);
-$return_val += mwexec("ln -sw {$rootfolder}/owncloud-update_extension.php /usr/local/www/owncloud-update_extension.php", true);
+$return_val += mwexec("ln -sf {$rootfolder}/locale-owncloud /usr/local/share/", true);
+$return_val += mwexec("ln -sf {$rootfolder}/owncloud-config.php /usr/local/www/owncloud-config.php", true);
+$return_val += mwexec("ln -sf {$rootfolder}/owncloud-update_extension.php /usr/local/www/owncloud-update_extension.php", true);
 $return_val += mwexec("mkdir -p /usr/local/www/ext", true);
-$return_val += mwexec("ln -sw {$rootfolder}/owncloud /usr/local/www/ext/owncloud", true);
+$return_val += mwexec("ln -sf {$rootfolder}/owncloud /usr/local/www/ext/owncloud", true);
 // use z-... prefix to override system defaults => opcache.max_accelerated_files=10000 and opcache.revalidate_freq=1
-$return_val += mwexec("cp {$rootfolder}/z-nextowncloud-php.ini /usr/local/etc/php/", true);
-$return_val += mwexec("echo upload_tmp_dir={$config['websrv']['uploaddir']} >> /usr/local/etc/php/z-nextowncloud-php.ini && service websrv restart", true);
+$return_val += mwexec("cp {$rootfolder}/nextowncloud-php.ini /usr/local/etc/php/", true);
+$return_val += mwexec("echo upload_tmp_dir={$config['websrv']['uploaddir']} >> /usr/local/etc/php/nextowncloud-php.ini && service websrv restart", true);
 // required for updater to work
 if (!is_file("/usr/local/share/certs/ca-root-nss.crt")) {
 	$return_val += mwexec("mkdir -p /usr/local/share/certs", true);
-	$return_val += mwexec("ln -sw /usr/local/etc/ssl/cert.pem /usr/local/share/certs/ca-root-nss.crt", true);
+	$return_val += mwexec("ln -sf /usr/local/etc/ssl/cert.pem /usr/local/share/certs/ca-root-nss.crt", true);
 }
+// required for external storage inclusion -> PHP-smbclient
+$return_val += mwexec("mkdir -p /usr/local/lib/php/extensions/no-debug-non-zts-20170718", true);
+$return_val += mwexec("cp {$rootfolder}/bin/smbclient.so /usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so", true);
+$return_val += mwexec("cp {$rootfolder}/bin/ext-20-smbclient.ini /usr/local/etc/php/ext-20-smbclient.ini", true);
+
 // check for product name and eventually rename translation files for new product name (XigmaNAS)
 $domain = strtolower(get_product_name());
 if ($domain <> "nas4free") {
