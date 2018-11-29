@@ -1,11 +1,9 @@
 ﻿Version Date        Description
-0.3.3   2018.11.28  N: add smbclient PHP extension for external storage support
+0.3.4   2018.11.29  N: add smbclient PHP extension for external storage support
                     N: add to Webserver > Auxparam:
-                        setenv.set-response-header = ("Referrer-Policy"=>"no-referrer")
-                        url.redirect = (
-                            "^/.well-known/caldav"  => "/nextcloud/remote.php/dav", 
-                            "^/.well-known/carddav" => "/nextcloud/remote.php/dav"
-                        )
+                            setenv.set-response-header = ("Referrer-Policy"=>"no-referrer")
+                            url.redirect += ("^/.well-known/caldav"  => "/{NC/OC/WebRoot}/remote.php/dav")
+                            url.redirect += ("^/.well-known/carddav"  => "/{NC/OC/WebRoot}/remote.php/dav")
                        to prevent application warnings
                     C: update Spanish translation
 

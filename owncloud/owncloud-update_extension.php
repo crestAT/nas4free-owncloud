@@ -61,7 +61,7 @@ if (isset($_POST['ext_remove']) && $_POST['ext_remove']) {
 	if (is_file("/usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so")) unlink("/usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so");
 	if (is_file("/usr/local/etc/php/ext-20-smbclient.ini")) unlink("/usr/local/etc/php/ext-20-smbclient.ini");
     write_config();
-	mwexec("rm /usr/local/etc/php/nextowncloud-php.ini && service websrv restart");
+	mwexec("rm /usr/local/etc/php/z-nextowncloud-php.ini && service websrv restart");
     mwexec("rm -R {$configuration['rootfolder']}");
 	header("Location:index.php");
 }

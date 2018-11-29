@@ -179,7 +179,8 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                         }
                         else { $input_errors[] = sprintf(gettext("Download of installation file %s failed, installation aborted!"), $configuration[$configuration['application']]['source']); }
                     }
-					if (is_array($config['websrv'])) {									// Prepare Webserver for HSTS security
+					if (is_array($config['websrv'])) {									
+					// Prepare Webserver for additional settings to prevent warnings from NC/OC
 						$rc_param_count = count($config['websrv']['auxparam']);
 						// check for Strict-Transport-Security
 						$rc_param_found = 0;
@@ -197,16 +198,26 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
 							write_config();
 							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' setenv.set-response-header = ("Referrer-Policy"=>"no-referrer")';
 						}
-						// check for remote.php/dav => NC v14.0.3
+						// check for .well-known\/caldav => NC v14.0.3
 						$rc_param_found = 0;
-						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/remote.php\/dav/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
+						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/.well-known\/caldav/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
 						if ($rc_param_found == 0) {
-							$config['websrv']['auxparam'][] = 'url.redirect = ("^/.well-known/caldav"  => "/nextcloud/remote.php/dav", "^/.well-known/carddav" => "/nextcloud/remote.php/dav")';
+							$urlRedirect = 'url.redirect += ("^/.well-known/caldav"  => "/'.$owncloud_document_root.'/remote.php/dav")';
+							$config['websrv']['auxparam'][] = $urlRedirect;
 							write_config();
-							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with").' url.redirect = ("^/.well-known/caldav"  => "/nextcloud/remote.php/dav", "^/.well-known/carddav" => "/nextcloud/remote.php/dav")';
+							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with")." {$urlRedirect}";
+						}
+						// check for .well-known\/carddav => NC v14.0.3
+						$rc_param_found = 0;
+						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/.well-known\/carddav/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;
+						if ($rc_param_found == 0) {
+							$urlRedirect = 'url.redirect += ("^/.well-known/carddav"  => "/'.$owncloud_document_root.'/remote.php/dav")';
+							$config['websrv']['auxparam'][] = $urlRedirect;
+							write_config();
+							$savemsg .= "<br />".gettext("Webserver")." ".gettext("Auxiliary parameters")." ".gettext("has been extended with")." {$urlRedirect}";
 						}
 					}
-                    require_once("{$configuration['rootfolder']}/owncloud-start.php");	// Webserver restart with upload_tmp_dir & HSTS enabled
+                    require_once("{$configuration['rootfolder']}/owncloud-start.php");	// Webserver restart
 
 					$rsync_logfile = rc_getenv_ex('rsync_client_logfile',"{$g['varlog_path']}/rsync_client.log");
 					$backup_script = fopen("{$configuration['rootfolder']}/{$configuration['application']}-backup.sh", "w");
