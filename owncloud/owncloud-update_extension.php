@@ -121,7 +121,7 @@ bindtextdomain($domain, "/usr/local/share/locale-owncloud");
 			<tr>
                 <td class="listt">
                     <div>
-                        <textarea id="content" name="content" class="listcontent" cols="1" rows="25" readonly="readonly"><?php unset($lines); exec("/bin/cat {$configuration['rootfolder']}/release_notes.txt", $lines); foreach ($lines as $line) { echo $line."\n"; }?></textarea>
+                        <textarea style="width: 100%;" id="content" name="content" class="listcontent" cols="1" rows="25" readonly="readonly"><?php unset($lines); exec("/bin/cat {$configuration['rootfolder']}/release_notes.txt", $lines); foreach ($lines as $line) { echo $line."\n"; }?></textarea>
                     </div>
                 </td>
 			</tr>
