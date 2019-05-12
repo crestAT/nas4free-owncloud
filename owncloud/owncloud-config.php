@@ -2,7 +2,7 @@
 /* 
     owncloud-config.php
 
-    Copyright (c) 2015 - 2018 Andreas Schmidhuber
+    Copyright (c) 2015 - 2019 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -181,7 +181,8 @@ if ((isset($_POST['save']) && $_POST['save']) || (isset($_POST['install']) && $_
                     }
 					if (is_array($config['websrv'])) {									
 					// Prepare Webserver for additional settings to prevent warnings from NC/OC
-						$rc_param_count = count($config['websrv']['auxparam']);
+						if (is_array($config['websrv']['auxparam'])) $rc_param_count = count($config['websrv']['auxparam']);
+						else $rc_param_count = 0; 
 						// check for Strict-Transport-Security
 						$rc_param_found = 0;
 						for ($i = 0; $i < $rc_param_count; $i++) if (preg_match("/Strict-Transport-Security/", $config['websrv']['auxparam'][$i])) $rc_param_found = 1;

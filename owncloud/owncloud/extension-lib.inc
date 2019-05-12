@@ -2,7 +2,7 @@
 /*
 	extension-lib.inc
 
-    Copyright (c) 2016 - 2018 Andreas Schmidhuber
+    Copyright (c) 2016 - 2019 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -26,9 +26,11 @@
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-$extension_lib_version = "1.1";
+$extension_lib_version = "1.3";
 /* Version history:
- * 1.1	2017.02.28	save config in ext_remove_rc_commands and ext_create_rc_commands 
+ * 1.3	2018.12.01	function ext_load_config: removed -> $config_data = utf8_encode($config_data); reason: wrong national character encoding
+ * 1.2	2018.08.13	function ext_check_version: append line break to the output message 
+ * 1.1	2017.02.28	save config in ext_remove_rc_commands and ext_create_rc_commands
  * 1.0	2017.02.27	includes changes for PHP 7.1
 */
 
@@ -162,7 +164,7 @@ if (!function_exists('ext_check_version'))   {
 			$return_val = mwexec("fetch -o {$test_filename} https://raw.github.com/crestAT/nas4free-{$extension_name}/master/{$extension_name}/version.txt", false);
 			if ($return_val == 0) {
 			    $server_version = exec("cat {$test_filename}");
-			    if ($server_version != $current_version) return sprintf(gettext("New extension version %s available, push '%s' button to install the new version!"), $server_version, $button_name);
+			    if ($server_version != $current_version) return sprintf(gettext("New extension version %s available, push '%s' button to install the new version!"), $server_version, $button_name)."<br />";
 			}
 			else return false;
 		}
@@ -181,7 +183,6 @@ if (!function_exists('ext_load_config'))   {
     function ext_load_config($config_file, $assoc = true, $depth = 512, $options = 0) {
         if (is_file($config_file)) {
             if (($config_data = file_get_contents($config_file)) === false) return false;
-            $config_data = utf8_encode($config_data);
             $config_data = json_decode($config_data, $assoc, $depth, $options);
             return $config_data;
         }

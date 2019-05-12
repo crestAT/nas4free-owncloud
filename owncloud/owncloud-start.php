@@ -2,7 +2,7 @@
 /*
     owncloud-start.php 
 
-    Copyright (c) 2015 - 2018 Andreas Schmidhuber
+    Copyright (c) 2015 - 2019 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -27,19 +27,38 @@
 */
 require_once("config.inc");
 $rootfolder = dirname(__FILE__);
+require_once("{$rootfolder}/owncloud/extension-lib.inc");
 
 unlink_if_exists("/usr/local/www/ext/owncloud");	// prevent nested symlinks
 $return_val = 0; 
+// required for external storage inclusion -> PHP-smbclient
+$pkgName = "smbclient";
+$pkgFileNameNeeded = "php".PHP_MAJOR_VERSION.PHP_MINOR_VERSION."-pecl-{$pkgName}";										// needed file PHP version based
+if (($manifest = ext_load_config("{$rootfolder}/bin/+MANIFEST")) !== false) $pkgManifestFileName = $manifest['name'];	// currently installed pkg
+if ($pkgFileNameNeeded != $pkgManifestFileName) {																		// if manifest not exists or PHP version changed ...
+	$pkgNeeded = exec("pkg search {$pkgName} | awk '/{$pkgFileNameNeeded}/ {print $1}'", $execOutput, $return_val);		// retrieve available packages
+	$pkgFile = "{$rootfolder}/bin/All/{$pkgNeeded}.txz";																// create package file name
+	if (!is_file($pkgFile)) exec("pkg fetch -y -o {$rootfolder}/bin {$pkgNeeded}", $execOutput, $return_val);			// fetch necessary package
+	$return_val += mwexec("LC_ALL=en_US.UTF-8 tar -xzf {$pkgFile} -C {$rootfolder}/bin", true);							// extract package
+	$manifest = ext_load_config("{$rootfolder}/bin/+MANIFEST");
+}
+$return_val += mwexec("mkdir -p ".PHP_EXTENSION_DIR, true);																// create dir if not exist
+foreach ($manifest['files'] as $mFKey => $mFValue) {
+	if (strpos($mFKey, "{$pkgName}.so") > 0) {																			// get lib path for copying
+		$libPath = "{$rootfolder}/bin{$mFKey}";
+		$return_val += mwexec("cp {$libPath} ".PHP_EXTENSION_DIR, true);
+	}
+	if (strpos($mFKey, "{$pkgName}.ini") > 0) {																			// get ini path for copying
+		$libPath = "{$rootfolder}/bin{$mFKey}";
+		$return_val += mwexec("cp {$libPath} {$mFKey}", true);
+	}
+}
 // create links to extension files
 $return_val += mwexec("ln -sf {$rootfolder}/locale-owncloud /usr/local/share/", true);
 $return_val += mwexec("ln -sf {$rootfolder}/owncloud-config.php /usr/local/www/owncloud-config.php", true);
 $return_val += mwexec("ln -sf {$rootfolder}/owncloud-update_extension.php /usr/local/www/owncloud-update_extension.php", true);
 $return_val += mwexec("mkdir -p /usr/local/www/ext", true);
 $return_val += mwexec("ln -sf {$rootfolder}/owncloud /usr/local/www/ext/owncloud", true);
-// required for external storage inclusion -> PHP-smbclient
-$return_val += mwexec("mkdir -p /usr/local/lib/php/extensions/no-debug-non-zts-20170718", true);
-$return_val += mwexec("cp {$rootfolder}/bin/smbclient.so /usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so", true);
-$return_val += mwexec("cp {$rootfolder}/bin/ext-20-smbclient.ini /usr/local/etc/php/ext-20-smbclient.ini", true);
 // override system defaults => opcache.max_accelerated_files=10000 and opcache.revalidate_freq=1 etc
 $return_val += mwexec("cp {$rootfolder}/z-nextowncloud-php.ini /usr/local/etc/php/", true);
 $return_val += mwexec("echo upload_tmp_dir={$config['websrv']['uploaddir']} >> /usr/local/etc/php/z-nextowncloud-php.ini", true);

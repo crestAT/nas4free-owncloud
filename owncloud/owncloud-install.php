@@ -2,7 +2,7 @@
 /* 
     owncloud-install.php
     
-    Copyright (c) 2015 - 2018 Andreas Schmidhuber
+    Copyright (c) 2015 - 2019 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-$version = "v0.3.4";			// extension version
+$version = "v0.3.5";			// extension version
 $appname = "NextOwnCloud";		// extension name
 $config_name = "owncloud";
 
@@ -52,7 +52,7 @@ else $verify_hostname = "";
 // fetch release archive
 $return_val = mwexec("fetch {$verify_hostname} -vo {$install_dir}/master.zip https://github.com/crestAT/nas4free-{$config_name}/releases/download/{$version}/{$config_name}-{$version_striped}.zip", false);
 if ($return_val == 0) {
-    $return_val = mwexec("tar -xf {$install_dir}/master.zip -C {$install_dir}/ --exclude='.git*' --strip-components 2", true);
+    $return_val = mwexec("LC_ALL=en_US.UTF-8 tar -xf {$install_dir}/master.zip -C {$install_dir}/ --exclude='.git*' --strip-components 2", true);
     if ($return_val == 0) {
         exec("rm {$install_dir}/master.zip");
         exec("chmod -R 775 {$install_dir}");

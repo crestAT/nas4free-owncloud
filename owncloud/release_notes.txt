@@ -1,4 +1,7 @@
 ﻿Version Date        Description
+0.3.5   2019.05.11  N: add memory_limit=512M to nextowncloud-php.ini
+					F: dynamical load appropriate smbclient PHP extension on system upgrades
+
 0.3.4   2018.11.29  N: add smbclient PHP extension for external storage support
                     N: add to Webserver > Auxparam:
                             setenv.set-response-header = ("Referrer-Policy"=>"no-referrer")

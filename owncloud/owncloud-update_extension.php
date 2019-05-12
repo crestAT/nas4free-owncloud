@@ -2,7 +2,7 @@
 /*
     owncloud-update_extension.php
     
-    Copyright (c) 2015 - 2018 Andreas Schmidhuber
+    Copyright (c) 2015 - 2019 Andreas Schmidhuber
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -58,7 +58,7 @@ if (isset($_POST['ext_remove']) && $_POST['ext_remove']) {
     if (is_link("/usr/local/www/owncloud-update_extension.php")) unlink("/usr/local/www/owncloud-update_extension.php");
     if (is_link("/usr/local/www/ext/owncloud")) unlink("/usr/local/www/ext/owncloud");
     mwexec("rmdir -p /usr/local/www/ext");
-	if (is_file("/usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so")) unlink("/usr/local/lib/php/extensions/no-debug-non-zts-20170718/smbclient.so");
+	if (is_file(PHP_EXTENSION_DIR."/smbclient.so")) unlink(PHP_EXTENSION_DIR."/smbclient.so");
 	if (is_file("/usr/local/etc/php/ext-20-smbclient.ini")) unlink("/usr/local/etc/php/ext-20-smbclient.ini");
     write_config();
 	mwexec("rm /usr/local/etc/php/z-nextowncloud-php.ini && service websrv restart");
@@ -121,7 +121,7 @@ bindtextdomain($domain, "/usr/local/share/locale-owncloud");
 			<tr>
                 <td class="listt">
                     <div>
-                        <textarea style="width: 98%;" id="content" name="content" class="listcontent" cols="1" rows="25" readonly="readonly"><?php unset($lines); exec("/bin/cat {$configuration['rootfolder']}/release_notes.txt", $lines); foreach ($lines as $line) { echo $line."\n"; }?></textarea>
+                        <textarea id="content" name="content" class="listcontent" cols="1" rows="25" readonly="readonly"><?php unset($lines); exec("/bin/cat {$configuration['rootfolder']}/release_notes.txt", $lines); foreach ($lines as $line) { echo $line."\n"; }?></textarea>
                     </div>
                 </td>
 			</tr>
